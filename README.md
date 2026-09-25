@@ -39,6 +39,8 @@
 
 它不会仅凭搜索摘要下结论。Skill 要求 Agent 打开候选记录，阅读必要的会话片段，合并同一任务的后续记录，再筛掉重复和无关内容。历史会话只能证明“当时记录了什么”；需要判断当前状态时，Agent 会另行核对现有文件或运行结果。
 
+解释文字使用内置的 [STE 魔改规则](references/ste-language-improvement.md)。中文回答会避开翻译腔、空话和不必要的术语；英文回答按该规则的英文部分处理。规则只调整 Agent 自己写的句子，不改动记录原文、引用、命令和事实。安装本 Skill 时会一并复制规则文件，**无需另装 STE Skill**。内置版本取自 [ste-language-zh-improvement](https://github.com/JamieJustTang/ste-language-zh-improvement/blob/2b9c7c9a7fc1b4c459abd9382dd00acc760fe839/SKILL.md)。
+
 ## 快速开始
 
 **1. 准备 sivtr。** 按 [sivtr 的安装说明](https://github.com/Ariestar/sivtr#快速开始) 安装并配置会话采集。建议为目标 Agent 配置 sivtr MCP；没有 MCP 时，本 Skill 可使用 sivtr CLI。先确认索引中有记录：
