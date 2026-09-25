@@ -10,7 +10,7 @@ sivtr s all:agent --last 3d --latest 80 -f timeline
 sivtr s docs:agent --last 3d --latest 20 -f timeline
 ```
 
-`all:agent` 跨所有本机工作区及已挂载来源搜索。`agent` 面向当前工作区。工作区范围可用 `sivtr ws list` 返回的 origin，例如 `docs:agent`；示例中的 `docs` 必须换成真实 origin，不要猜名称。全局结果可能被高活动工作区占满，因此默认盘点还要逐个查看相关工作区。`--cwd` 可把当前工作区解析到指定目录。`--latest` 限制近期候选记录，不能误认为 session 数。只有确认当前会话确实被 sivtr 识别、且需要避免自引用时才加 `--exclude-current`；该选项在某些宿主/档案组合中会意外排除当前工作区的唯一相关会话，零命中时要移除它重试。
+`all:agent` 跨所有本机工作区及已挂载来源搜索。`agent` 面向当前工作区。工作区范围可用 `sivtr ws list` 返回的 origin，例如 `docs:agent`；示例中的 `docs` 必须换成真实 origin，不要猜名称。全局结果不能证明覆盖完整：即使命中数低于 `--limit`，跨工作区问题仍应按 `ws list` 对每个相关工作区补查。`--cwd` 可把当前工作区解析到指定目录。`--latest` 限制近期候选记录，不能误认为 session 数。只有确认当前会话确实被 sivtr 识别、且需要避免自引用时才加 `--exclude-current`；该选项在某些宿主/档案组合中会意外排除当前工作区的唯一相关会话，零命中时要移除它重试。
 
 先看 `sivtr ws list`。`all:agent` 只覆盖已登记的工作区；当前目录若未登记，需对相应目录用 `agent --cwd /实际路径` 另查。不能把全局零命中解释成整个本机没有会话。检索输出量大时把 `--json` 写入权限为 600 的临时文件，再读取少量元数据；不要把完整 WorkSet 或大量同步警告直接交给 Agent 上下文。
 
