@@ -83,6 +83,7 @@ def main() -> None:
     if command:
         print(f"Command adapter: {command}")
     print("Optional: tell the agent your working language, role, familiar fields, usual meaning of 'recent', and maximum sessions per answer.")
+    print("Optional Jev reranking: install jev-rag-retrieval and configure your own TYPESAFE_API_KEY in a private environment file; never put the key in chat or this repository.")
 
 
 if __name__ == "__main__":

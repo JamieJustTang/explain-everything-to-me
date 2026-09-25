@@ -4,6 +4,8 @@
 
 一个面向多 Agent 工作记忆的 Skill。你提出问题，当前 Agent 使用 [sivtr](https://github.com/Ariestar/sivtr) 搜索会话，阅读相关原文，核对进展与证据，然后给出能直接使用的解释。你无需翻日志，也无需从搜索结果里手动挑 session。
 
+可选的 [jev-rag-retrieval](https://github.com/JamieJustTang/jev-rag-retrieval) 会进一步给候选 session 和会话内关键段落排序。它只决定先读哪里；Agent 仍会打开原文核实。
+
 > **sivtr 保存并检索工作记录；这个 Skill 负责理解问题、阅读记录和组织答案。** 它不会替代 sivtr，也不需要把所有会话导入某个特定 Agent。
 
 ## 为什么需要它？
@@ -74,6 +76,14 @@ python3 scripts/install.py --host codex
 
 如果你安装到 Codex，请改用 `$explain-everything-to-me`。初次使用时，建议先问一个小范围问题，确认宿主能读取 sivtr 记录。
 
+**可选：启用 Jev 语义排序。** 安装独立工具，并在你自己的私有环境中设置 `TYPESAFE_API_KEY`：
+
+```bash
+uv tool install 'git+https://github.com/JamieJustTang/jev-rag-retrieval.git' --with typesafe-sdk
+```
+
+安装 Skill 的 Agent 应提示你：可以配置自己的 Jev API key，以增强 session 匹配及会话内重要段落的排序。密钥不要写入仓库或命令参数。配置后，工具会把当前问题与候选短片段发给 TypeSafe；你不配置时仍可使用 sivtr 完成检索与解释。若要完全本地处理，可要求 Agent 不调用 Jev。详见[检索流程](references/jev-retrieval.md)和 TypeSafe 的[官方 Skill 文档](https://docs.typesafe.ai/agent-skill)。
+
 ## 支持的宿主
 
 | 宿主 | `HOST` | 用户入口 | 安装方式 |
@@ -118,6 +128,7 @@ Codex 目前不能把此 Skill 注册成同名斜杠命令。Dsh TUI 支持用�
 | 组件 | 负责什么 |
 | --- | --- |
 | [sivtr](https://github.com/Ariestar/sivtr) | 采集、索引和检索终端与 Agent 会话；提供 MCP 工具、CLI 和稳定引用 |
+| [jev-rag-retrieval](https://github.com/JamieJustTang/jev-rag-retrieval)（可选） | 对已有候选做 session 与段落两级排序；保留原始引用 |
 | 本 Skill | 把自然语言需求变成检索意图，自动阅读并筛选会话，按问题解释结果 |
 | 当前 Agent | 执行检索、核对证据、说明不确定性，并用你的工作语言回答 |
 
