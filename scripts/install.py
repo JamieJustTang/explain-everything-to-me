@@ -16,7 +16,7 @@ def copy_bundle(destination: Path, *, user_only: bool) -> None:
     if destination.exists():
         raise SystemExit(f"Target already exists; review it before replacing: {destination}")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(SOURCE, destination, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    shutil.copytree(SOURCE, destination, ignore=shutil.ignore_patterns(".git", ".DS_Store", "__pycache__", "*.pyc"))
     if user_only:
         skill = destination / "SKILL.md"
         content = skill.read_text(encoding="utf-8")

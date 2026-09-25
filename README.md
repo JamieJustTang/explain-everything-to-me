@@ -1,6 +1,16 @@
 # explain-everything-to-me
 
-用一个斜杠命令，请当前 Agent 查阅多个 Agent 的工作记忆并把事情讲明白。检索由 [sivtr](https://github.com/Ariestar/sivtr) 提供；解释、关联、筛选和核对由调用 Skill 的 Agent 完成。它不绑定 DeepSeek、Codex、Claude 或任何单一 Agent。
+### 你的 Agents 做了什么？让它们自己查清楚，再讲给你听。
+
+一个面向多 Agent 工作记忆的 Skill。你提出问题，当前 Agent 使用 [sivtr](https://github.com/Ariestar/sivtr) 搜索会话，阅读相关原文，核对进展与证据，然后给出能直接使用的解释。你无需翻日志，也无需从搜索结果里手动挑 session。
+
+> **sivtr 保存并检索工作记录；这个 Skill 负责理解问题、阅读记录和组织答案。** 它不会替代 sivtr，也不需要把所有会话导入某个特定 Agent。
+
+## 为什么需要它？
+
+几个 Agent 同时工作时，信息很快散落在不同会话和工作区。一个 Agent 说测试通过，另一个 Agent 后来改了方案；你想知道的是**现在发生了什么、为什么改、还需要你决定什么**。
+
+直接调用即可：
 
 ```text
 /explain-everything-to-me 最近各个项目的 agents 做了什么？哪些需要我决定？
@@ -8,40 +18,101 @@
 /explain-everything-to-me
 ```
 
-不附加内容时，默认问题是“向我解释最近我的 agents 发生的一切。根据工作区进行分组。”**同一会话再次调用时**，“最近”默认从上一次调用的用户消息时间算起；首次调用则先探索过去 3 天。时间无法可靠判定且会影响答案时，Agent 应弹出时间段选项。Agent 会自行挑出相关 sessions、阅读原文并汇总，不要求你手动筛选。回答会标明实际检索时间范围、证据来源和无法核实的地方。
+最后一条不带参数，等同于：“向我解释最近我的 agents 发生的一切。根据工作区进行分组。”Codex 的显式入口是 `$explain-everything-to-me`，其余支持的宿主使用上面的斜杠命令。
 
-## 准备与安装
+## 它会怎样回答？
 
-1. 按 [sivtr README](https://github.com/Ariestar/sivtr#快速开始) 安装 CLI，并配置所需的 Agent 会话采集。已有 sivtr 时无需重复安装。推荐把 sivtr MCP 连接到要使用的宿主；没有 MCP 时，本 Skill 可调用 CLI。第一次运行前确认 `sivtr ws list`、`sivtr s agent --latest 5 --refs` 有可读记录。索引能覆盖哪些 Agent 和工作区，取决于 sivtr 的实际发现与配置。
-2. 运行 `python3 scripts/install.py --host HOST`，其中 `HOST` 为下表之一。Antigravity 需加 `--workspace /你的工作区路径`。安装器复制同一份 Skill，并仅在宿主需要时生成显式命令适配；遇到已有目标会停止，不覆盖原文件。它不会安装 sivtr 或修改采集、分享设置。
+例如你问：“最近各工作区做了什么？”回答会按工作区组织，说明完成的事、关键决定、验证结果、未解决的问题，以及你是否需要行动。重要结论会附上 sivtr 的记录引用。下面是**格式示意，并非真实检索结果**：
 
-| 宿主 | 安装命令中的 `HOST` | 用户入口 | 显式调用实现 |
+```text
+检索范围：9 月 22 日 10:00 至 9 月 25 日 10:00（首次调用，按最近 3 天）
+
+工作区 A
+- 完成：Agent 修改了数据解析流程，并运行了相关测试。[来源：sivtr WorkRef]
+- 待决定：是否保留旧格式兼容层。记录里有两种方案，尚未见到你的决定。
+
+工作区 B
+- 本次时间范围内未找到新增会话；索引覆盖情况见下方说明。
+
+下次“最近”从这里算：2026-09-25T10:00:00+08:00（本次用户调用时间）
+```
+
+它不会仅凭搜索摘要下结论。Skill 要求 Agent 打开候选记录，阅读必要的会话片段，合并同一任务的后续记录，再筛掉重复和无关内容。历史会话只能证明“当时记录了什么”；需要判断当前状态时，Agent 会另行核对现有文件或运行结果。
+
+## 快速开始
+
+**1. 准备 sivtr。** 按 [sivtr 的安装说明](https://github.com/Ariestar/sivtr#快速开始) 安装并配置会话采集。建议为目标 Agent 配置 sivtr MCP；没有 MCP 时，本 Skill 可使用 sivtr CLI。先确认索引中有记录：
+
+```bash
+sivtr ws list
+sivtr s agent --latest 5 --refs
+```
+
+**2. 下载并安装本 Skill。** 在仓库目录里选择一个宿主：
+
+```bash
+git clone https://github.com/JamieJustTang/explain-everything-to-me.git
+cd explain-everything-to-me
+python3 scripts/install.py --host codex
+```
+
+将 `codex` 换成下表中的 `HOST`。Antigravity 还需要 `--workspace /你的工作区路径`。安装器复制 Skill，并为需要的宿主创建显式命令入口。已有同名安装时，它会停止，不覆盖你的文件。
+
+**3. 在宿主中显式调用。** 例如：
+
+```text
+/explain-everything-to-me 过去两天，哪个项目有失败的测试？后来如何处理？
+```
+
+如果你安装到 Codex，请改用 `$explain-everything-to-me`。初次使用时，建议先问一个小范围问题，确认宿主能读取 sivtr 记录。
+
+## 支持的宿主
+
+| 宿主 | `HOST` | 用户入口 | 安装方式 |
 | --- | --- | --- | --- |
-| Codex | `codex` | `$explain-everything-to-me` | `agents/openai.yaml` 禁止隐式调用；[官方 Skill 入口](https://learn.chatgpt.com/docs/build-skills)是 `$` 或 `/skills`，目前不能把 Skill 自身注册为同名斜杠命令。 |
-| Claude Code | `claude` | `/explain-everything-to-me` | 安装器为副本加入 `disable-model-invocation: true`；见 [Claude Skills 文档](https://code.claude.com/docs/en/skills)。 |
-| Dsh | `dsh` | `/explain-everything-to-me` | 安装器加入用户可调用、模型不可调用字段；要求启用 Dsh 的 `tool-skill` 与本地 Skill 提供方。Dsh TUI 支持用户专用 Skill；当前 Dsh Web 的 Skill 列表只显示模型与用户均可调用的交集，因此 Web 中可能不显示此命令。 |
-| Gemini CLI | `gemini` | `/explain-everything-to-me` | 安装器生成[自定义命令](https://geminicli.com/docs/cli/custom-commands/)；Skill 放在非自动发现目录，由命令按路径读取。 |
-| Google Antigravity | `antigravity` | `/explain-everything-to-me` | 安装器在工作区生成 [Workflow](https://codelabs.developers.google.com/autonomous-ai-developer-pipelines-antigravity)；Skill 放在非自动发现目录。 |
-| Grok Build | `grok` | `/explain-everything-to-me` | 安装器加入 `disable-model-invocation: true` 和 `user-invocable: true`；见 [Grok Skills 文档](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/08-skills.md)。 |
-| Pi | `pi` | `/explain-everything-to-me` | 安装器生成 Prompt Template，Skill 放在非自动发现目录；原生 Skill 入口是 `/skill:explain-everything-to-me`，见 [Pi Skills 文档](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/skills.md)。 |
+| Codex | `codex` | `$explain-everything-to-me` | Skill；[官方入口](https://learn.chatgpt.com/docs/build-skills)使用 `$` 或 `/skills` |
+| Claude Code | `claude` | `/explain-everything-to-me` | 仅用户可调用的 [Skill](https://code.claude.com/docs/en/skills) |
+| Dsh | `dsh` | `/explain-everything-to-me` | 仅用户可调用的 Skill；需启用 `tool-skill` 和本地 Skill 提供方 |
+| Gemini CLI | `gemini` | `/explain-everything-to-me` | [自定义命令](https://geminicli.com/docs/cli/custom-commands/)读取 Skill |
+| Google Antigravity | `antigravity` | `/explain-everything-to-me` | 工作区 [Workflow](https://codelabs.developers.google.com/autonomous-ai-developer-pipelines-antigravity) 读取 Skill |
+| Grok Build | `grok` | `/explain-everything-to-me` | 仅用户可调用的 [Skill](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/08-skills.md) |
+| Pi | `pi` | `/explain-everything-to-me` | Prompt Template 读取 Skill；原生 Skill 入口为 `/skill:explain-everything-to-me` |
 
-Gemini CLI 与 Antigravity 是不同宿主；上表的 `gemini` 指 Gemini CLI，`antigravity` 指 Google Antigravity IDE。Grok 行指 Grok Build CLI，不是 grok.com 网页聊天。宿主若不支持本机文件读取或 `sivtr`，无法执行本地记忆检索。首次安装后可用宿主的 Skill/命令列表确认入口，再用一条小范围查询试运行。
+Codex 目前不能把此 Skill 注册成同名斜杠命令。Dsh TUI 支持用户专用 Skill；Dsh Web 的 Skill 列表可能不显示它。这里的 Grok 指 Grok Build CLI，Gemini 指 Gemini CLI。宿主必须能读取本机文件或调用 sivtr，才能使用本地记忆。
 
-严格同名斜杠入口目前不能在 Codex 的 Skill 机制中实现；这一项需要 Codex 提供自定义斜杠命令映射，或接受其 `$` 显式入口。其余六个宿主按上表提供同名斜杠入口。
+## “最近”从什么时候算？
 
-### 安装时建议设定
+这个 Skill 会先读取**当前会话中上一次用户调用它的时间**：
 
-建议告诉安装 Agent 两个偏好：
+| 你的说法 | 使用的时间范围 |
+| --- | --- |
+| “过去 24 小时”“9 月 1 日至 9 月 3 日”等 | 你明确给出的范围 |
+| 同一会话再次说“最近”或只输入命令 | 从上一次调用的用户消息时间，到本次调用时间 |
+| 首次调用或无法可靠找回上次时间 | 默认先探索最近 **3 天** |
 
-- **“最近”通常指多久**：首次调用或找不到上次调用时间时，默认探索过去 **3 天**。你可以改成“过去 24 小时”“过去 5 天”等。同一会话再次调用时，仍优先从上次调用时间算起；每次命令里明确写出的时间范围始终优先。
-- **一次最多纳入多少条相关 session**：默认由问题和证据覆盖情况决定，没有固定上限。若你希望控制阅读与回答篇幅，可以设为“最多 8 条”等；达到上限时，Agent 应优先保留最相关的会话，并说明仍有多少候选未读或未纳入，不能把受限结果说成完整盘点。
+如果时间记录互相冲突，或者不同时间范围会明显改变答案，Agent 会请你选择。每次回答都会写明实际检索范围，并留下本次调用时间，供下一次核对。“新增”按事件发生时间判断，不按 Agent 上次有没有提到判断。
 
-例如：“用中文解释；我是产品经理，熟悉用户研究和统计；首次调用的‘最近’按过去 48 小时算；一次最多纳入 8 条相关 session。”若在安装前提供，请安装 Agent 将这两个偏好写入本 Skill 的时间规则和检索/筛选规则，再安装到各宿主。若已经安装，需同步修改各宿主的 Skill 副本；只在对话中说一次不会自动变成永久设置。不设偏好也能使用上述默认规则。
+## 安装时可以设定的偏好
 
-**如果由 Agent 代你安装：** 安装完成后，还请它提醒你可选地说明工作语言、职业或工作角色、熟悉的知识领域，以及上述两个时间和数量偏好。这些信息用于调整解释方式与检索范围。除非你明确要求保存，安装 Agent 不应把职业和知识背景等个人信息写进文件或记忆库。
+建议告诉安装 Agent：
 
-## 设计来源
+- **“最近”通常指多久**：首次调用默认 3 天，你可以改为 24 小时、5 天等。同一会话再次调用时，仍优先从上次调用时间算起。命令里明确写出的时间始终优先。
+- **一次最多纳入多少条相关 session**：默认没有固定上限，由问题和证据决定。你可以设成“最多 8 条”。达到上限时，Agent 应保留最相关的会话，并说明还有多少候选未读或未纳入；受限结果不能称作完整盘点。
 
-本 Skill 延续 [Dsh 旧版](https://github.com/JamieJustTang/explain-everything-to-me-dsh-legacy) 的思路：把别的 Agent 的会话当作可追溯、有限的上下文；解释“做了什么、为什么、当前卡在哪、用户该决定什么”；用平实语言把机器汇报变成人能判断的内容。此版本把检索层改为 sivtr，覆盖其支持的多个 Agent、终端记录和工作区，并让 Agent 自主完成候选会话筛选。旧版依赖 Dsh 的会话导入机制；本版只依赖 Skill 宿主与 sivtr 的现有能力。
+例如：“用中文解释；我是产品经理，熟悉用户研究和统计；首次调用的‘最近’按过去 48 小时算；一次最多纳入 8 条相关 session。”
 
-本 Skill 默认只读。历史会话是证据，不代表当前项目状态；需要现状结论时 Agent 会另行核实。
+若在安装前提供偏好，请安装 Agent 将时间与数量规则写入本 Skill，再安装到各宿主。若已经安装，需同步修改各宿主的 Skill 副本。只在对话中说一次，不会自动保存为永久设置。
+
+如果由 Agent 代你安装，安装后它还应提醒你：可选地说明工作语言、职业或工作角色、熟悉的知识领域，以及上述两个偏好。这些信息帮助它调整解释深度。除非你明确要求保存，它不应把职业和知识背景写进文件或记忆库。
+
+## 与 sivtr 的关系
+
+| 组件 | 负责什么 |
+| --- | --- |
+| [sivtr](https://github.com/Ariestar/sivtr) | 采集、索引和检索终端与 Agent 会话；提供 MCP 工具、CLI 和稳定引用 |
+| 本 Skill | 把自然语言需求变成检索意图，自动阅读并筛选会话，按问题解释结果 |
+| 当前 Agent | 执行检索、核对证据、说明不确定性，并用你的工作语言回答 |
+
+本 Skill 只在你显式调用时运行，默认只读。它不会自动安装 sivtr、打开远程分享，或把历史记录写成已经核实的当前事实。能看到哪些 Agent 和工作区，取决于 sivtr 的实际采集与索引。
+
+这个项目延续 [Dsh 旧版](https://github.com/JamieJustTang/explain-everything-to-me-dsh-legacy) 的解释思路。新版本使用 sivtr 检索跨 Agent 记录，并让调用 Skill 的 Agent 自行完成会话筛选。
