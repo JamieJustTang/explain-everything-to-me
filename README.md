@@ -41,6 +41,12 @@
 
 解释文字使用内置的 [STE 魔改规则](references/ste-language-improvement.md)。中文回答会避开翻译腔、空话和不必要的术语；英文回答按该规则的英文部分处理。规则只调整 Agent 自己写的句子，不改动记录原文、引用、命令和事实。安装本 Skill 时会一并复制规则文件，**无需另装 STE Skill**。内置版本取自 [ste-language-zh-improvement](https://github.com/JamieJustTang/ste-language-zh-improvement/blob/2b9c7c9a7fc1b4c459abd9382dd00acc760fe839/SKILL.md)。
 
+### 会随你的用语习惯进化
+
+Skill 会从本次查阅的 session 中留意你本人反复使用、明确要求或纠正过的表达方式。它只从已有证据提炼简短规则，不额外翻查与你的问题无关的私人会话。**通用**习惯可用于各工作区；**项目特定**词汇和说法只在对应项目使用。
+
+学习顺序是“提取证据 → 自主写入 → revise 评估 → 通过后使用”。它不会每次都强行学到新规则，也不会在写入前逐条要求批准。若评估发现误读或范围问题，新规则会隔离，Skill 会向你报告并请求指示。通过的规则存于本机 `~/.explain-everything-to-me/language-memory.json`，不进入 GitHub 仓库；你可以要求查看、改写、停用或删除。[查看完整规则](references/language-evolution.md)。
+
 ## 快速开始
 
 **1. 准备 sivtr。** 按 [sivtr 的安装说明](https://github.com/Ariestar/sivtr#快速开始) 安装并配置会话采集。建议为目标 Agent 配置 sivtr MCP；没有 MCP 时，本 Skill 可使用 sivtr CLI。先确认索引中有记录：
