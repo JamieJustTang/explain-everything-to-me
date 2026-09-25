@@ -12,6 +12,14 @@
 
 不带参数时，默认问题是：**“向我解释最近我的 agents 发生的一切。根据工作区进行分组。”** Codex 的入口是 `$explain-everything-to-me`；其余支持的宿主使用 `/explain-everything-to-me`。只有你显式调用，Skill 才会运行。
 
+## 三张图看懂
+
+| ① 为什么需要它 | ② 它怎样解释 | ③ 怎么提问、支持哪些 Agent |
+| :---: | :---: | :---: |
+| [![四个痛点：会话分散、跨工作区、搜索命中不等于答案、Agent 越用越不说人话](assets/xiaohongshu/00-four-pain-points.png)](assets/xiaohongshu/00-four-pain-points.png) | [![AI 总秘书用你的语言讲清各工作区进展](assets/xiaohongshu/01-pain-points.png)](assets/xiaohongshu/01-pain-points.png) | [![最佳实践提问示例与七个 Agent 宿主](assets/xiaohongshu/02-best-practice.png)](assets/xiaohongshu/02-best-practice.png) |
+
+点击图片可查看原图。
+
 ## 功能一览
 
 | 功能 | 当前行为 |
