@@ -6,7 +6,8 @@ import os
 import shutil
 from pathlib import Path
 
-from configure_dsh_mcp import configure, find_sivtr
+from configure_dsh_mcp import find_sivtr
+from configure_mcp import configure as configure_mcp
 
 
 NAME = "explain-everything-to-me"
@@ -40,6 +41,7 @@ def main() -> None:
     parser.add_argument("--host", required=True, choices=("codex", "claude", "dsh", "gemini", "antigravity", "grok", "pi"))
     parser.add_argument("--home", type=Path, default=Path.home(), help="Override home directory (also useful for a test install)")
     parser.add_argument("--workspace", type=Path, help="Required for Antigravity; install into this workspace")
+    parser.add_argument("--no-mcp", action="store_true", help="Do not configure the host-wide sivtr MCP server")
     args = parser.parse_args()
     home = args.home.expanduser().resolve()
 
@@ -68,12 +70,15 @@ def main() -> None:
     if bundle.exists() or (command and command.exists()):
         raise SystemExit(f"Existing installation found: {bundle if bundle.exists() else command}")
     copy_bundle(bundle, user_only=args.host in USER_ONLY)
-    if args.host == "dsh":
+    if not args.no_mcp:
         executable = find_sivtr(home)
         if executable:
-            configure(roots["dsh"].parent, executable)
+            try:
+                configure_mcp(args.host, home, executable)
+            except (OSError, ValueError, RuntimeError) as exc:
+                print(f"MCP setup failed: {exc}. Run scripts/configure_mcp.py --host {args.host} after fixing the host configuration.")
         else:
-            print("sivtr was not found. Install it, then run scripts/configure_dsh_mcp.py to connect Dsh MCP.")
+            print(f"sivtr was not found. Install it, then run scripts/configure_mcp.py --host {args.host} to connect MCP where supported.")
     skill_path = bundle / "SKILL.md"
     if args.host == "gemini":
         # JSON strings are also valid TOML basic strings.

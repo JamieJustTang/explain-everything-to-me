@@ -1,5 +1,7 @@
 # explain-everything-to-me
 
+当前版本：**0.2.0**
+
 **问一句：我的 Agents 最近做了什么？**
 
 这个 Skill 把你的问题变成跨 Agent 的会话检索，自己打开原文、核对后续变化，再给你一份按问题组织的解释。你不用翻日志，也不用从搜索结果中手动挑 session。
@@ -41,7 +43,7 @@ flowchart LR
     E --> F[按问题解释并附引用]
 ```
 
-这个仓库是**解释层**。它沿用 sivtr 原有的归档与检索方式，不打包 sivtr、TUI 或归档数据库，也没有另建轻量索引。Skill 使用 sivtr MCP；没有 MCP 时使用 CLI。TUI 不是使用条件。
+这个仓库是**解释层**。它沿用 sivtr 原有的归档与检索方式，不打包 sivtr、TUI 或归档数据库，也没有另建轻量索引。支持的宿主优先连接本机 sivtr MCP；没有 MCP 时使用 CLI。TUI 不是使用条件。
 
 ## 回答是什么样
 
@@ -66,7 +68,7 @@ Skill 会说明实际查过的时间、工作区和来源。历史会话只能�
 
 ### 1. 准备 sivtr
 
-按 [sivtr 安装说明](https://github.com/Ariestar/sivtr#快速开始)安装 CLI，并确认它能找到你的 Agent 会话。建议给使用本 Skill 的宿主连接 sivtr MCP；没有 MCP 时可用 CLI。
+按 [sivtr 安装说明](https://github.com/Ariestar/sivtr#快速开始)安装 CLI，并确认它能找到你的 Agent 会话。安装器会在支持的宿主接入本机 sivtr MCP；没有 MCP 时可用 CLI。
 
 ```bash
 sivtr ws list
@@ -77,27 +79,29 @@ sivtr s agent --latest 5 --refs
 
 ### 2. 安装 Skill
 
+安装脚本需要 Python 3.10 或更新版本。
+
 ```bash
 git clone https://github.com/JamieJustTang/explain-everything-to-me.git
 cd explain-everything-to-me
 python3 scripts/install.py --host codex
 ```
 
-将 `codex` 换成下表的 `HOST`。安装器会复制 Skill，并在需要时创建显式命令入口。它遇到同名安装会停止，避免覆盖你改过的文件。Antigravity 还需要 `--workspace /你的工作区路径`。
+将 `codex` 换成下表的 `HOST`。安装器会复制 Skill，并在需要时创建显式命令入口。它遇到同名安装会停止，避免覆盖你改过的文件。Antigravity 还需要 `--workspace /你的工作区路径`。安装器默认接入 sivtr MCP；若只想安装 Skill，使用 `--no-mcp`。
 
-| 宿主 | `HOST` | 调用入口 | 安装形式 |
+| 宿主 | `HOST` | 调用入口 | sivtr 接入 |
 | --- | --- | --- | --- |
-| Codex | `codex` | `$explain-everything-to-me` | 显式调用的 Skill |
-| Claude Code | `claude` | `/explain-everything-to-me` | 仅用户可调用的 Skill |
-| Dsh | `dsh` | `/explain-everything-to-me` | 仅用户可调用的 Skill；安装器同时连接 sivtr MCP |
-| Gemini CLI | `gemini` | `/explain-everything-to-me` | 自定义命令读取 Skill |
-| Google Antigravity | `antigravity` | `/explain-everything-to-me` | 工作区 Workflow 读取 Skill |
-| Grok Build | `grok` | `/explain-everything-to-me` | 仅用户可调用的 Skill |
-| Pi | `pi` | `/explain-everything-to-me` | Prompt Template 读取 Skill；原生 Skill 入口为 `/skill:explain-everything-to-me` |
+| [Codex](https://developers.openai.com/learn/docs-mcp) | `codex` | `$explain-everything-to-me` | 安装器用原生命令配置 MCP |
+| [Claude Code](https://code.claude.com/docs/en/mcp) | `claude` | `/explain-everything-to-me` | 安装器用原生命令配置 MCP |
+| [Dsh](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) | `dsh` | `/explain-everything-to-me` | 安装器写入宿主级 MCP patch |
+| [Gemini CLI](https://geminicli.com/docs/tools/mcp-server/) | `gemini` | `/explain-everything-to-me` | 安装器用原生命令配置 MCP |
+| [Google Antigravity](https://www.antigravity.google/docs/mcp?tab=ide) | `antigravity` | `/explain-everything-to-me` | 安装器写入全局 MCP 配置 |
+| Grok Build | `grok` | `/explain-everything-to-me` | 安装器用原生命令配置 MCP |
+| [Pi](https://pi.dev/) | `pi` | `/explain-everything-to-me` | 核心程序无内置 MCP；默认用 sivtr CLI |
 
-本安装器给 Codex 提供 `$` Skill 入口。Dsh TUI 可使用用户 Skill；Dsh Web 的 Skill 列表可能不显示它。Dsh 安装时若找到 `sivtr`，安装器会在 `~/.dsh/cordis.patch.yml` 加入全局 MCP 配置，所有 Dsh profile 重启后都可使用 `mcp__sivtr__...` 工具。Dsh 的工作区写入沙箱可能阻止 CLI 更新 `~/.sivtr` 归档，因此 Dsh 推荐使用这个 MCP 连接。MCP 服务在 Dsh 宿主进程中运行，能读取本机 sivtr 归档；只为信任的本机 sivtr 可执行文件配置此连接。
+本安装器给 Codex 提供 `$` Skill 入口。Dsh TUI 可使用用户 Skill；Dsh Web 的 Skill 列表可能不显示它。配置 sivtr MCP 会让该宿主的其他会话也能调用本机 sivtr 工具，因此只应连接信任的本机可执行文件。宿主的沙箱与 MCP 权限各不相同，配置成功后仍需确认工具确实连通。Dsh 的 `workspace-write` 会阻止其 `bash` 更新 `~/.sivtr` 数据库；宿主级 MCP 可避开这条 CLI 路径。Pi 若自行安装可信的 MCP 扩展，也可使用 sivtr MCP，但本安装器不会代装扩展。
 
-已经安装旧版 Dsh Skill 时，在本仓库运行 `python3 scripts/configure_dsh_mcp.py`，重启 Dsh，再将新版 Skill 文件同步到 `~/.dsh/skills/explain-everything-to-me`。若 `sivtr` 不在 `PATH`，可传 `--sivtr /绝对路径/sivtr`。这一步无需复制或重建归档，也不要把 `~/.sivtr` 复制进项目目录。
+已经安装旧版 Skill 时，可运行 `python3 scripts/configure_mcp.py --host HOST` 单独接入 MCP，再同步新版 Skill 文件并重启对应宿主。若 `sivtr` 不在 `PATH`，可传 `--sivtr /绝对路径/sivtr`。不需要复制或重建归档，也不要把 `~/.sivtr` 复制进项目目录。
 
 安装脚本复制的是当时的版本。更新仓库不会自动更新各宿主的副本；升级时先检查自己改过的设置，再替换对应副本。
 
