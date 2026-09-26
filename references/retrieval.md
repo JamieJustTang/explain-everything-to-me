@@ -1,18 +1,19 @@
 # sivtr 检索手册
 
-以下命令按 [sivtr 官方 Skill](https://github.com/Ariestar/sivtr/tree/main/skills/sivtr-memory) 与 [CLI 文档](https://sivtr.pages.dev/zh-cn/reference/cli/)编写。版本不同时，以本机 `sivtr --help` 和实际 MCP schema 为准。优先使用已连接的 MCP 同名工具；命令仅是 CLI 回退示例。
+以下命令按 [sivtr 官方 Skill](https://github.com/Ariestar/sivtr/tree/main/skills/sivtr-memory) 与 [CLI 文档](https://sivtr.pages.dev/zh-cn/reference/cli/)编写。版本不同时，以本机 `sivtr --help` 和实际 MCP schema 为准。**已连接 MCP 时直接用 MCP 工具，不必为了运行下列 CLI 示例而切换到 shell。**`sivtr_status.origins` 对应 CLI 的工作区列表；`sivtr_search` 对应搜索。
 
 ## 先确定检索范围
 
 ```bash
 sivtr ws list
+sivtr s agent --cwd "$PWD" --last 3d --latest 30 -f timeline
 sivtr s all:agent --last 3d --latest 80 -f timeline
 sivtr s docs:agent --last 3d --latest 20 -f timeline
 ```
 
-`all:agent` 跨所有本机工作区及已挂载来源搜索。`agent` 面向当前工作区。工作区范围可用 `sivtr ws list` 返回的 origin，例如 `docs:agent`；示例中的 `docs` 必须换成真实 origin，不要猜名称。全局结果不能证明覆盖完整：即使命中数低于 `--limit`，跨工作区问题仍应按 `ws list` 对每个相关工作区补查。`--cwd` 可把当前工作区解析到指定目录。`--latest` 限制近期候选记录，不能误认为 session 数。只有确认当前会话确实被 sivtr 识别、且需要避免自引用时才加 `--exclude-current`；该选项在某些宿主/档案组合中会意外排除当前工作区的唯一相关会话，零命中时要移除它重试。
+`agent` 面向 `--cwd` 指定的当前工作区。`all:agent` 跨**已登记**的本机工作区及已挂载来源搜索；当前工作区没有登记时，它不会被包含。先查 `agent --cwd`，跨工作区问题再查 `all:agent`。工作区范围可用 `sivtr ws list` 返回的 origin，例如 `docs:agent`；MCP 下可读 `sivtr_status` 返回的 `origins`，无需为列工作区调用 CLI。示例中的 `docs` 必须换成真实 origin，不要猜名称。全局结果不能证明覆盖完整：即使命中数低于 `--limit`，跨工作区问题仍应对相关 origin 补查。`--latest` 限制近期候选记录，不能误认为 session 数。只有确认当前会话确实被 sivtr 识别、且需要避免自引用时才加 `--exclude-current`；该选项在某些宿主/档案组合中会意外排除当前工作区的唯一相关会话，零命中时要移除它重试。
 
-先看 `sivtr ws list`。`all:agent` 只覆盖已登记的工作区；当前目录若未登记，需对相应目录用 `agent --cwd /实际路径` 另查。不能把全局零命中解释成整个本机没有会话。检索输出量大时把 `--json` 写入权限为 600 的临时文件，再读取少量元数据；不要把完整 WorkSet 或大量同步警告直接交给 Agent 上下文。
+CLI 可先看 `sivtr ws list`，MCP 可看 `sivtr_status.origins`。无论当前目录是否登记，都要对当前工作区用 `agent --cwd /实际路径` 查询；`all:agent` 只覆盖已登记的工作区。不能把全局零命中解释成整个本机没有会话；也不要因为 `sivtr_stats` 某天有全局记录，就推断某个 origin 当天一定有记录。确认时间格式有效后，零命中应先换来源范围，再考虑扩大时间窗口；不要反复试等价时间戳。检索输出量大时把 `--json` 写入权限为 600 的临时文件，再读取少量元数据；不要把完整 WorkSet 或大量同步警告直接交给 Agent 上下文。
 
 定向问题示例：
 
@@ -20,7 +21,7 @@ sivtr s docs:agent --last 3d --latest 20 -f timeline
 sivtr s all:agent "parser benchmark" --last 30d --limit 30 -f timeline
 sivtr s all:agent -m "解析器|parser|基准|benchmark" --last 30d --limit 30 -f timeline
 sivtr s docs:agent "decision" --last 14d --limit 20 --refs
-sivtr s all:agent --since 2026-09-25T10:00:00+08:00 --until 2026-09-25T16:00:00+08:00 --limit 40 -f timeline
+sivtr s agent --cwd "$PWD" --since 2026-09-25T10:00:00+08:00 --until 2026-09-25T16:00:00+08:00 --limit 40 -f timeline
 ```
 
 位置参数是 BM25 文本查询，`-m` 是不区分大小写的正则过滤；二者不是同一种语法。`--last` 是相对时间，`--limit` 是输出硬上限；词面搜索漏掉主题时可搜标题、输入或别名，并用按时间浏览兜底。终端证据需要时用 `terminal` 或 `all:terminal` 另查。记录可能来自不同 provider，不能把一个 provider 当作全部 Agent。
