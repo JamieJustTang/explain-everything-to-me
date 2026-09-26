@@ -1,6 +1,6 @@
 interface:
   display_name: "Explain Everything to Me"
-  short_description: "按需检索跨 Agent 会话并解释工作进展与决策"
+  short_description: "理解用户目标，解释跨 Agent 工作进展与决策"
   default_prompt: "Use $explain-everything-to-me to explain what my agents have done recently, grouped by workspace."
 
 policy:
