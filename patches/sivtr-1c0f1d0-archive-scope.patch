@@ -1,0 +1,447 @@
+diff --git a/crates/sivtr-core/src/archive/store.rs b/crates/sivtr-core/src/archive/store.rs
+index 7fb3b48..e2ed53a 100644
+--- a/crates/sivtr-core/src/archive/store.rs
++++ b/crates/sivtr-core/src/archive/store.rs
+@@ -472,6 +472,101 @@ pub fn list_workspace_sessions(
+     Ok(listed)
+ }
+ 
++/// List sessions from the entire local archive, independently of registered
++/// workspaces. Bounds are applied before record blobs are decoded.
++pub fn list_archive_sessions(
++    conn: &Connection,
++    namespaces: &[&str],
++    cwd: Option<&Path>,
++    since: Option<&str>,
++    until: Option<&str>,
++) -> Result<Vec<ListedSession>> {
++    let browsing_key = cwd
++        .and_then(crate::workspace::repo_identity)
++        .unwrap_or_default();
++    let cwd_norm = cwd
++        .map(crate::agents::normalize_path_for_match)
++        .unwrap_or_default();
++    let no_workspace_filter = cwd.is_none() as i64;
++    let mut listed = Vec::new();
++    for namespace in namespaces {
++        let mut stmt = conn.prepare(
++            "SELECT id, source_path FROM sessions
++             WHERE provider = ?1
++               AND (?2 IS NULL OR julianday(COALESCE(ended_at, started_at, synced_at)) >= julianday(?2))
++               AND (?3 IS NULL OR julianday(COALESCE(started_at, ended_at, synced_at)) <= julianday(?3))
++               AND (?4 = 1 OR cwd_norm = ?5 OR (?6 != '' AND workspace_key = ?6))
++             ORDER BY mtime_secs DESC, mtime_nanos DESC, id DESC",
++        )?;
++        let rows = stmt.query_map(
++            params![
++                namespace,
++                since,
++                until,
++                no_workspace_filter,
++                cwd_norm,
++                browsing_key
++            ],
++            |row| {
++                Ok(ListedSession {
++                    row_id: row.get(0)?,
++                    provider: (*namespace).to_string(),
++                    source_path: row.get(1)?,
++                })
++            },
++        )?;
++        listed.extend(rows.collect::<std::result::Result<Vec<_>, _>>()?);
++    }
++    Ok(listed)
++}
++
++/// Count records whose event time is inside the requested window.
++pub fn archive_record_budget_in_window(
++    conn: &Connection,
++    session_row: i64,
++    since: Option<&str>,
++    until: Option<&str>,
++) -> Result<(i64, i64)> {
++    let budget = conn.query_row(
++        "SELECT COUNT(*), COALESCE(SUM(LENGTH(blob)), 0) FROM records WHERE session_row = ?1
++         AND (?2 IS NULL OR julianday(COALESCE(ended_at, started_at)) >= julianday(?2))
++         AND (?3 IS NULL OR julianday(COALESCE(ended_at, started_at)) <= julianday(?3))",
++        params![session_row, since, until],
++        |row| Ok((row.get(0)?, row.get(1)?)),
++    )?;
++    Ok(budget)
++}
++
++/// Decode only records in the requested event-time window from one session.
++pub fn load_archive_records_in_window(
++    conn: &Connection,
++    session_row: i64,
++    since: Option<&str>,
++    until: Option<&str>,
++    mode: BlobMode,
++) -> Result<Vec<WorkRecord>> {
++    let column = match mode {
++        BlobMode::Full => "blob",
++        BlobMode::Light => "blob_light",
++    };
++    let sql = format!(
++        "SELECT {column} FROM records WHERE session_row = ?1
++         AND (?2 IS NULL OR julianday(COALESCE(ended_at, started_at)) >= julianday(?2))
++         AND (?3 IS NULL OR julianday(COALESCE(ended_at, started_at)) <= julianday(?3))
++         ORDER BY idx ASC"
++    );
++    let mut stmt = conn.prepare(&sql)?;
++    let blobs = stmt.query_map(params![session_row, since, until], |row| {
++        row.get::<_, Vec<u8>>(0)
++    })?;
++    blobs
++        .map(|blob| {
++            let blob = blob?;
++            rmp_serde::from_slice(&blob).context("Failed to decode archived record blob")
++        })
++        .collect()
++}
++
+ /// Every archived session of one provider, as the sync engine sees it:
+ /// source path plus the stamp recorded at last sync.
+ pub fn provider_stamps(
+@@ -1055,6 +1150,77 @@ mod tests {
+         std::env::remove_var("SIVTR_HOME");
+     }
+ 
++    #[test]
++    fn archive_listing_spans_unregistered_workspaces_and_applies_time_bounds() {
++        let _guard = crate::test_env_lock();
++        let dir = tempfile::tempdir().unwrap();
++        std::env::set_var("SIVTR_HOME", dir.path());
++        let conn = crate::archive::open().unwrap();
++
++        let first = vec![terminal_record("older", 1, "first")];
++        let mut older = sample_upsert(&first);
++        older.session_id = "older";
++        older.source_path = Path::new("/unregistered-a/older.jsonl");
++        older.cwd = Some("/unregistered-a");
++        upsert_session(&conn, &older).unwrap();
++
++        let mut newest_record = terminal_record("newer", 1, "second");
++        newest_record.time.ended_at = Some("2026-01-03T00:00:00Z".into());
++        let second = vec![newest_record];
++        let mut newer = sample_upsert(&second);
++        newer.session_id = "newer";
++        newer.source_path = Path::new("/unregistered-b/newer.jsonl");
++        newer.cwd = Some("/unregistered-b");
++        upsert_session(&conn, &newer).unwrap();
++
++        let all = list_archive_sessions(&conn, &["terminal"], None, None, None).unwrap();
++        assert_eq!(all.len(), 2);
++        let recent = list_archive_sessions(
++            &conn,
++            &["terminal"],
++            None,
++            Some("2026-01-02T00:00:00Z"),
++            Some("2026-01-04T00:00:00Z"),
++        )
++        .unwrap();
++        assert_eq!(recent.len(), 1);
++        assert_eq!(recent[0].source_path, "/unregistered-b/newer.jsonl");
++        let selected = list_archive_sessions(
++            &conn,
++            &["terminal"],
++            Some(Path::new("/unregistered-b")),
++            None,
++            None,
++        )
++        .unwrap();
++        assert_eq!(selected.len(), 1);
++        assert_eq!(selected[0].source_path, "/unregistered-b/newer.jsonl");
++        assert_eq!(
++            archive_record_budget_in_window(
++                &conn,
++                recent[0].row_id,
++                Some("2026-01-02T00:00:00Z"),
++                Some("2026-01-04T00:00:00Z"),
++            )
++            .unwrap()
++            .0,
++            1
++        );
++        assert_eq!(
++            load_archive_records_in_window(
++                &conn,
++                recent[0].row_id,
++                Some("2026-01-02T00:00:00Z"),
++                Some("2026-01-04T00:00:00Z"),
++                BlobMode::Full,
++            )
++            .unwrap()
++            .len(),
++            1
++        );
++        std::env::remove_var("SIVTR_HOME");
++    }
++
+     #[test]
+     fn list_filters_by_workspace_and_exact_cwd() {
+         let _guard = crate::test_env_lock();
+diff --git a/crates/sivtr-core/src/query/mod.rs b/crates/sivtr-core/src/query/mod.rs
+index a4230b2..44beb53 100644
+--- a/crates/sivtr-core/src/query/mod.rs
++++ b/crates/sivtr-core/src/query/mod.rs
+@@ -21,6 +21,10 @@ use crate::session_source::{workspace_sources, SessionSource};
+ /// empty result; keep it a named constant so that contract cannot drift.
+ pub const NO_RECORD_FOR_SELECTOR: &str = "No record found for ref selector";
+ 
++/// A broad archive query must be narrowed before full record blobs are read.
++const MAX_ARCHIVE_RECORDS: i64 = 5_000;
++const MAX_ARCHIVE_BLOB_BYTES: i64 = 256 * 1024 * 1024;
++
+ /// A session file that could not be parsed, retained so callers can warn.
+ #[derive(Debug, Clone)]
+ pub struct SkippedSession {
+@@ -193,6 +197,83 @@ pub fn load_workspace_source(
+     })
+ }
+ 
++/// Load a selector across every local session in the unified archive.
++/// This does not consult the workspace registry or remote mounts.
++pub fn load_archive_source(
++    source: &str,
++    mode: LoadMode,
++    cwd: Option<&Path>,
++    since: Option<&str>,
++    until: Option<&str>,
++) -> Result<SourceQueryResult> {
++    if since.is_none() && until.is_none() {
++        anyhow::bail!("archive search requires a time bound (--since, --until, or --last); search older history in bounded windows");
++    }
++    let selector: WorkRefSelector = source.parse()?;
++    let providers = selector.providers();
++    let sources = workspace_sources(&providers);
++    let namespaces: Vec<&str> = sources
++        .iter()
++        .map(|source| source.namespace())
++        .filter(|namespace| match selector {
++            WorkRefSelector::Terminal { .. } => *namespace == "terminal",
++            WorkRefSelector::Agent { .. } => *namespace != "terminal",
++        })
++        .collect();
++    let conn = crate::archive::open()?;
++    let sync_skipped = crate::archive::sync::ensure_fresh_with_conn(&conn)?;
++    let listed =
++        crate::archive::store::list_archive_sessions(&conn, &namespaces, cwd, since, until)?;
++    let mut skipped = Vec::new();
++    let mut count = 0;
++    let mut bytes = 0;
++    for session in &listed {
++        let (session_count, session_bytes) =
++            crate::archive::store::archive_record_budget_in_window(
++                &conn,
++                session.row_id,
++                since,
++                until,
++            )?;
++        count += session_count;
++        bytes += session_bytes;
++        if count > MAX_ARCHIVE_RECORDS || bytes > MAX_ARCHIVE_BLOB_BYTES {
++            anyhow::bail!("archive search window is too large to load safely; narrow the time window or provider");
++        }
++    }
++    let mut records = Vec::with_capacity(count as usize);
++    for session in &listed {
++        match crate::archive::store::load_archive_records_in_window(
++            &conn,
++            session.row_id,
++            since,
++            until,
++            mode.into(),
++        ) {
++            Ok(session_records) => records.extend(session_records),
++            Err(error) => skipped.push(SkippedSession {
++                namespace: session.provider.clone(),
++                path: PathBuf::from(&session.source_path),
++                error: format!("{error:#}"),
++            }),
++        }
++    }
++    skipped.extend(sync_skipped);
++    dedup_records(&mut records);
++    normalize_session_display_ids(&mut records);
++    records.retain(|record| selector.matches_work_ref(&record.work_ref));
++    records.sort_by(|a, b| b.time.primary_at().cmp(&a.time.primary_at()));
++    let anchors = records
++        .iter()
++        .map(|record| record.work_ref.whole())
++        .collect();
++    Ok(SourceQueryResult {
++        records,
++        anchors,
++        skipped,
++    })
++}
++
+ fn all_agent_providers() -> Vec<AgentProvider> {
+     AgentProvider::all()
+         .iter()
+diff --git a/docs-site/src/content/docs/reference/cli.md b/docs-site/src/content/docs/reference/cli.md
+index 12283be..b056551 100644
+--- a/docs-site/src/content/docs/reference/cli.md
++++ b/docs-site/src/content/docs/reference/cli.md
+@@ -216,11 +216,13 @@ Targets:
+ | Target | Meaning |
+ | --- | --- |
+ | `terminal[/<session>[/<record>[/p<part>]]]` | Terminal command records |
+-| `agent[/<session>[/<turn>[/p<part>]]]` | All registered AI/agent records |
++| `agent[/<session>[/<turn>[/p<part>]]]` | AI/agent records in the current workspace |
++| `archive:agent` or `archive:<provider>` | Every local archived workspace, including workspaces absent from `sivtr ws list` |
++| `all:agent` | Registered local workspace origins and the current workspace's remote mounts |
+ | `codex` / `claude` / `cursor` / `opencode` / `openclaw` / `grok` / `hermes` / `pi` / `qoder` `[/<session>[/<turn>[/p<part>]]]` | One provider's records |
+ | `<origin>:<target>` | Named remote or other local workspace origin, for example `desk:terminal` or `docs:codex/4` |
+ 
+-Use `*` for wildcard path segments, for example `terminal/*/3` or `pi/*/*`. Origins come from `sivtr remote add <alias> ...` or local workspace names listed by `sivtr ws list`.
++Use `*` for wildcard path segments, for example `terminal/*/3` or `pi/*/*`. Origins come from `sivtr remote add <alias> ...` or local workspace names listed by `sivtr ws list`. `archive:` requires `--since`, `--until`, or `--last`; pass `--cwd` to narrow it to one workspace, or omit it to cover every local archived workspace. Narrow an oversized result window or search older history in multiple windows.
+ 
+ Options:
+ 
+diff --git a/docs-site/src/content/docs/zh-cn/reference/cli.md b/docs-site/src/content/docs/zh-cn/reference/cli.md
+index dcb7596..906498e 100644
+--- a/docs-site/src/content/docs/zh-cn/reference/cli.md
++++ b/docs-site/src/content/docs/zh-cn/reference/cli.md
+@@ -214,11 +214,13 @@ Targets：
+ | Target | 含义 |
+ | --- | --- |
+ | `terminal[/<session>[/<record>[/p<part>]]]` | 终端命令记录 |
+-| `agent[/<session>[/<turn>[/p<part>]]]` | 所有已注册 AI / Agent 记录 |
++| `agent[/<session>[/<turn>[/p<part>]]]` | 当前工作区的 AI / Agent 记录 |
++| `archive:agent` 或 `archive:<provider>` | 本机归档中所有工作区，包括未出现在 `sivtr ws list` 中的工作区 |
++| `all:agent` | 已登记的本机工作区来源及当前工作区的远端挂载 |
+ | `codex` / `claude` / `cursor` / `opencode` / `openclaw` / `grok` / `hermes` / `pi` / `qoder` `[/<session>[/<turn>[/p<part>]]]` | 单个 provider 的记录 |
+ | `<origin>:<target>` | 命名 remote 或其他本机 workspace origin，例如 `desk:terminal` 或 `docs:codex/4` |
+ 
+-可以用 `*` 作为 path segment 通配符，例如 `terminal/*/3` 或 `pi/*/*`。origin 来自 `sivtr remote add <alias> ...`，或 `sivtr ws list` 列出的本机 workspace 名。
++可以用 `*` 作为 path segment 通配符，例如 `terminal/*/3` 或 `pi/*/*`。origin 来自 `sivtr remote add <alias> ...`，或 `sivtr ws list` 列出的本机 workspace 名。`archive:` 必须提供 `--since`、`--until` 或 `--last`；加 `--cwd` 可限制到一个工作区，不加则覆盖所有本机已归档工作区。结果窗口过大时缩小范围，较久的历史可分段检索。
+ 
+ 选项：
+ 
+diff --git a/src/cli/mod.rs b/src/cli/mod.rs
+index b25cd82..ae106d7 100644
+--- a/src/cli/mod.rs
++++ b/src/cli/mod.rs
+@@ -594,7 +594,7 @@ pub struct DiffArgs {
+ #[derive(Args, Debug, Clone)]
+ pub struct SearchArgs {
+     /// Source selector, e.g. terminal, agent, pi, pi/<session>/<turn>, terminal/<session>/<record>, @last, or @ctx[1,3].
+-    /// Prefix with `all:` (e.g. all:agent) to search every origin — all local workspaces plus the current workspace's remote mounts — as one corpus
++    /// Prefix with `all:` for registered origins and mounts, or `archive:` (e.g. archive:agent) for every local archived workspace
+     #[arg(value_name = "SOURCE")]
+     pub source: String,
+ 
+diff --git a/src/commands/memory/show.rs b/src/commands/memory/show.rs
+index 8a4e367..cb5782f 100644
+--- a/src/commands/memory/show.rs
++++ b/src/commands/memory/show.rs
+@@ -93,6 +93,22 @@ pub fn execute(args: &ShowArgs) -> Result<()> {
+ 
+ /// Resolve a show source into a WorkSet without printing.
+ pub fn run(args: &ShowArgs) -> Result<workset::WorkSet> {
++    if let Ok(reference) = args.source.parse::<WorkRef>() {
++        if reference.is_local() {
++            let requested_cwd = args.cwd.clone().or_else(|| std::env::current_dir().ok());
++            if let (Some(cwd), Ok(last)) = (requested_cwd, workset::load_reference("@last")) {
++                if let Some(record) = workset::find_record([last.records()], &reference) {
++                    if record.cwd.as_deref().map(std::path::Path::new) == Some(cwd.as_path()) {
++                        return Ok(workset::WorkSet::from_parts(
++                            last.cwd().to_string(),
++                            vec![record.clone()],
++                            vec![reference],
++                        ));
++                    }
++                }
++            }
++        }
++    }
+     workset::query(
+         &args.source,
+         crate::commands::memory::filter::Filter::none(),
+diff --git a/src/commands/memory/workset/source.rs b/src/commands/memory/workset/source.rs
+index 6fbeab4..dc97b17 100644
+--- a/src/commands/memory/workset/source.rs
++++ b/src/commands/memory/workset/source.rs
+@@ -5,7 +5,9 @@ use std::time::Duration;
+ 
+ use anyhow::{Context, Result};
+ use sivtr_core::origin::{Entry, Reach};
+-use sivtr_core::query::{load_workspace_source, LoadMode, NO_RECORD_FOR_SELECTOR};
++use sivtr_core::query::{
++    load_archive_source, load_workspace_source, LoadMode, NO_RECORD_FOR_SELECTOR,
++};
+ use sivtr_core::record::{expand_source, WorkPath, WorkRecord, WorkRef};
+ 
+ use crate::commands::memory::filter::{self, Filter};
+@@ -133,10 +135,31 @@ pub fn query(source: &str, filter: Filter, cwd: Option<&Path>) -> Result<WorkSet
+         return apply_loaded(super::load_reference(source)?, filter);
+     }
+ 
++    let requested_cwd = cwd;
+     let cwd = cwd
+         .map(Path::to_path_buf)
+         .unwrap_or(std::env::current_dir().context("Failed to resolve current directory")?);
+ 
++    if let Some((scope, selector)) = source.split_once(':') {
++        if scope.eq_ignore_ascii_case("archive") {
++            if selector.is_empty() {
++                anyhow::bail!("source `archive:` is missing a selector");
++            }
++            let result = load_archive_source(
++                selector,
++                LoadMode::Full,
++                requested_cwd,
++                filter.since.as_deref(),
++                filter.until.as_deref(),
++            )?;
++            warn_skipped(&result.skipped);
++            return apply_loaded(
++                WorkSet::from_parts(cwd.display().to_string(), result.records, result.anchors),
++                filter,
++            );
++        }
++    }
++
+     let sources = resolve_source(source, &cwd)?;
+     let results = query_sources(&sources, filter.clone(), Some(&cwd))?;
+     merge_and_apply(results, &cwd, filter)
+diff --git a/src/mcp/server.rs b/src/mcp/server.rs
+index ead5b15..0637808 100644
+--- a/src/mcp/server.rs
++++ b/src/mcp/server.rs
+@@ -36,7 +36,7 @@ impl SivtrMcp {
+     }
+ 
+     #[tool(
+-        description = "Search local or mounted remote workspace memory (terminal + AI sessions). Uses the same bounds as CLI search: defaults to latest=5 when neither latest nor limit is set. Prefer narrow queries. Returns refs and compact summaries by default."
++        description = "Search workspace memory (terminal + AI sessions). Use archive:agent for every local archived workspace without registration; pass cwd to narrow it to one workspace. archive: requires since, until, or last and rejects oversized windows. all:agent covers registered origins and mounts. Defaults to latest=5 when neither latest nor limit is set. Prefer narrow queries. Returns refs and compact summaries by default."
+     )]
+     fn sivtr_search(
+         &self,
+@@ -51,7 +51,7 @@ impl SivtrMcp {
+     }
+ 
+     #[tool(
+-        description = "Show exact content for a WorkRef or WorkSet handle (@last, @name, desk:terminal/...). Use after search to expand evidence."
++        description = "Show exact content for a WorkRef or WorkSet handle (@last, @name, desk:terminal/...). After archive: search, prefer @last[1] or a saved @name[1] handle for the first hit: it reuses the searched records instead of reloading an entire workspace for each WorkRef."
+     )]
+     fn sivtr_show(
+         &self,
+diff --git a/src/mcp/types.rs b/src/mcp/types.rs
+index 9ec602d..54d7aab 100644
+--- a/src/mcp/types.rs
++++ b/src/mcp/types.rs
+@@ -14,7 +14,9 @@ use sivtr_core::workset::WorkSet;
+ 
+ #[derive(Debug, Clone, Deserialize, JsonSchema)]
+ pub struct SearchParams {
+-    /// Source selector: terminal, agent, pi, desk:terminal, @last, or all:<src>
++    /// Source selector: terminal, agent, pi, desk:terminal, @last, all:<src>,
++    /// or archive:<src> for every local archived workspace without registration
++    /// (requires since, until, or last; optional cwd narrows to one workspace)
+     /// (e.g. all:agent searches every origin — all local workspaces plus the
+     /// current workspace's remote mounts — as one corpus).
+     pub source: String,

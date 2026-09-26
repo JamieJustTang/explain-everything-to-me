@@ -1,6 +1,6 @@
 # explain-everything-to-me
 
-当前版本：**0.2.1**
+当前版本：**0.3.0**
 
 **问一句：我的 Agents 最近做了什么？**
 
@@ -27,7 +27,7 @@
 | 功能 | 当前行为 |
 | --- | --- |
 | 理解问题 | 从自然语言识别工作区、主题、Agent、时间和真正要回答的事，组合检索式。 |
-| 查跨 Agent 记录 | 使用 [sivtr](https://github.com/Ariestar/sivtr) 的 MCP 或 CLI 检索已收录的会话；先查当前工作区，再查已登记的其他工作区。 |
+| 查跨 Agent 记录 | 使用 [sivtr](https://github.com/Ariestar/sivtr) 的 MCP 或 CLI 查询统一归档；`archive:agent` 一次覆盖所有已归档的本机工作区，无需逐个登记。 |
 | 自动阅读与筛选 | 按 session 去重，打开命中记录和相邻内容，核对起因、关键结果与最终状态；不让你手动筛选候选列表。 |
 | 解释变化 | 串起多个 session 的连续工作，区分旧背景、新进展、Agent 的说法、工具证据与当前已核实的状态；重要结论附 WorkRef。 |
 | 理解“最近” | 同一会话内再次调用时，从上次**用户调用时间**算起；首次无参数调用默认查最近 **3 天**。时间含糊且影响答案时，请你选时间段。 |
@@ -76,6 +76,23 @@ sivtr s agent --latest 5 --refs
 ```
 
 可见范围由 sivtr 实际发现和收录的来源决定。本 Skill 不会替你初始化采集、接入远端或共享会话。
+
+跨本机所有工作区的一次检索需要 sivtr 提供 `archive:agent` 来源；加 `--cwd` 可只查一个工作区。可用 `sivtr search --help` 检查是否列出 `archive:`；尚未包含此功能的构建会退回当前工作区与已登记来源的检索，并明确报告覆盖范围。远端挂载仍需用 `all:agent` 或具体来源另查。
+
+仓库附有针对 sivtr 基线提交 `1c0f1d0` 的[全机归档检索补丁](patches/sivtr-1c0f1d0-archive-scope.patch)。在 sivtr 正式提供等价功能前，可从本仓库目录在 macOS/Linux 上自行编译（需要 Rust 1.95 或更新版本）：
+
+```bash
+cd ..
+git clone https://github.com/Ariestar/sivtr.git
+cd sivtr
+git checkout 1c0f1d0e9f720fcda6b3f024c74f2aebfe024b41
+git apply ../explain-everything-to-me/patches/sivtr-1c0f1d0-archive-scope.patch
+cargo build --release --bin sivtr
+mkdir -p "$HOME/.local/bin"
+install -m 755 target/release/sivtr "$HOME/.local/bin/sivtr"
+```
+
+若 MCP 配置指向其他路径，改为替换该路径或重新配置宿主 MCP。补丁的全机入口要求时间边界，单次窗口过大时应分段检索。
 
 ### 2. 安装 Skill
 

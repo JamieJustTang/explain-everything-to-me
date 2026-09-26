@@ -42,6 +42,7 @@ def configure(dsh_home: Path, executable: Path) -> Path:
         "        transport: stdio\n"
         f"        command: {json.dumps(str(executable))}\n"
         "        args: ['mcp', 'serve']\n"
+        "        toolCallTimeoutMs: 120000\n"
     )
     prefix = "" if not existing or lines == ["[]"] else existing.rstrip() + "\n\n"
     dsh_home.mkdir(parents=True, exist_ok=True)
