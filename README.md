@@ -70,7 +70,17 @@ Skill 会先根据用户原话与已读会话判断工作目标，再解释各�
 
 ## 汇报模板
 
-先判断你要完成什么，再选模板。默认使用[速览](templates/brief.md)：先说目标和最重要的变化，再按目标与工作性质归类；无参数调用仍按工作区分组，并在每组说明它服务什么目标。要求详细复盘时用[按工作区详读](templates/workspace.md)；只问“哪些事需要我决定”时用[待决事项](templates/decisions.md)。你也可以在命令里明确说“用 workspace 模板，重点讲 C7”。具体问题仍由问题本身决定答案，不强行塞进固定栏目。
+Skill 先从你的问题和会话原文判断：你要完成什么、各项工作起什么作用，然后才选汇报结构。你可以直接说要哪种模板；没指定时，Skill 按问题选择。具体问题仍由问题本身决定答案，不强行塞进固定栏目。
+
+| 模板 | 适合什么问题 | 怎么用 |
+| --- | --- | --- |
+| [速览 `brief`](templates/brief.md) | “最近有什么进展？”等宽泛问题。先讲目标、关键变化和需要你处理的事；无参数调用按工作区分组。 | `/explain-everything-to-me 用 brief 模板，概括最近 3 天` |
+| [按工作区详读 `workspace`](templates/workspace.md) | 想知道某个项目做到了哪一步、为什么改变方案、还有什么没验证。 | `/explain-everything-to-me 用 workspace 模板，详细解释 C7 的进展` |
+| [待决事项 `decisions`](templates/decisions.md) | 只想看哪些决定或资源确实需要自己处理。 | `/explain-everything-to-me 用 decisions 模板，哪些事需要我决定？` |
+
+上表用 `/` 展示通用命令；**Codex 请把开头改成 `$explain-everything-to-me`**。你也可以不说模板名，直接要求“按工作区详细复盘”或“只列需要我决定的事”。宽泛总结默认用速览；无参数调用仍按工作区分组。
+
+### 自定义默认模板
 
 要长期调整默认结构，复制速览模板到用户目录再修改标题、顺序、篇幅等：
 
@@ -79,7 +89,28 @@ mkdir -p "$HOME/.explain-everything-to-me/templates"
 cp templates/brief.md "$HOME/.explain-everything-to-me/templates/default.md"
 ```
 
-也可以在该目录放 `brief.md`、`workspace.md` 或 `decisions.md`，覆盖对应内置模板。这个目录由所有宿主共用，升级 Skill 时不会覆盖。模板只影响汇报的呈现，不能改变检索范围、证据要求或 Skill 的调用条件；文件读不到时会回退到内置模板。
+`default.md` 用于没有指定模板的宽泛总结。下面是一个可替换其内容的简短例子；栏目标题、顺序和篇幅都可以按你的阅读习惯修改：
+
+```markdown
+# 我的默认汇报模板
+
+先用两句话说明：从记录看，我正在推进什么目标；最近有什么关键变化。
+
+## 按工作区看进展
+每个工作区只写：它服务什么目标、已完成什么、当前卡在哪里。跨工作区的同一目标在开头串起来。
+
+## 需要我处理
+只写确实需要我决定或提供资源的事项；没有就直说没有。
+
+## 范围与限制
+写明查过的时间与来源、重要缺口，以及“下次最近从这里算”的时间标记。重要结论就近附 WorkRef。
+```
+
+### 覆盖内置模板或新增专用模板
+
+在同一目录放 `brief.md`、`workspace.md` 或 `decisions.md`，可分别覆盖内置版本。例如，把 `templates/workspace.md` 复制到 `~/.explain-everything-to-me/templates/workspace.md` 后修改，命令里说“用 workspace 模板”就会使用你的版本。
+
+也可以新建 `~/.explain-everything-to-me/templates/research.md`，然后调用 `/explain-everything-to-me 用 research 模板，复盘 Social Reflexes`。自定义名称必须在命令里点名；只读取这次选中的模板。该用户目录由所有宿主共用，升级 Skill 时不会覆盖。模板只控制呈现方式和详略，不能改变检索范围、证据要求或显式调用条件；模板缺失或不可读时会回退到合适的内置版本并说明。
 
 ## 安装
 
