@@ -6,6 +6,8 @@ import os
 import shutil
 from pathlib import Path
 
+from configure_dsh_mcp import configure, find_sivtr
+
 
 NAME = "explain-everything-to-me"
 SOURCE = Path(__file__).resolve().parents[1]
@@ -66,6 +68,12 @@ def main() -> None:
     if bundle.exists() or (command and command.exists()):
         raise SystemExit(f"Existing installation found: {bundle if bundle.exists() else command}")
     copy_bundle(bundle, user_only=args.host in USER_ONLY)
+    if args.host == "dsh":
+        executable = find_sivtr(home)
+        if executable:
+            configure(roots["dsh"].parent, executable)
+        else:
+            print("sivtr was not found. Install it, then run scripts/configure_dsh_mcp.py to connect Dsh MCP.")
     skill_path = bundle / "SKILL.md"
     if args.host == "gemini":
         # JSON strings are also valid TOML basic strings.

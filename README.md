@@ -89,13 +89,15 @@ python3 scripts/install.py --host codex
 | --- | --- | --- | --- |
 | Codex | `codex` | `$explain-everything-to-me` | 显式调用的 Skill |
 | Claude Code | `claude` | `/explain-everything-to-me` | 仅用户可调用的 Skill |
-| Dsh | `dsh` | `/explain-everything-to-me` | 仅用户可调用的 Skill；需启用本地 Skill 提供方与 `tool-skill` |
+| Dsh | `dsh` | `/explain-everything-to-me` | 仅用户可调用的 Skill；安装器同时连接 sivtr MCP |
 | Gemini CLI | `gemini` | `/explain-everything-to-me` | 自定义命令读取 Skill |
 | Google Antigravity | `antigravity` | `/explain-everything-to-me` | 工作区 Workflow 读取 Skill |
 | Grok Build | `grok` | `/explain-everything-to-me` | 仅用户可调用的 Skill |
 | Pi | `pi` | `/explain-everything-to-me` | Prompt Template 读取 Skill；原生 Skill 入口为 `/skill:explain-everything-to-me` |
 
-本安装器给 Codex 提供 `$` Skill 入口。Dsh TUI 可使用用户 Skill；Dsh Web 的 Skill 列表可能不显示它。宿主需要能读本机 Skill 文件并使用 sivtr MCP 或 CLI。
+本安装器给 Codex 提供 `$` Skill 入口。Dsh TUI 可使用用户 Skill；Dsh Web 的 Skill 列表可能不显示它。Dsh 安装时若找到 `sivtr`，安装器会在 `~/.dsh/cordis.patch.yml` 加入全局 MCP 配置，所有 Dsh profile 重启后都可使用 `mcp__sivtr__...` 工具。Dsh 的工作区写入沙箱可能阻止 CLI 更新 `~/.sivtr` 归档，因此 Dsh 推荐使用这个 MCP 连接。MCP 服务在 Dsh 宿主进程中运行，能读取本机 sivtr 归档；只为信任的本机 sivtr 可执行文件配置此连接。
+
+已经安装旧版 Dsh Skill 时，在本仓库运行 `python3 scripts/configure_dsh_mcp.py`，重启 Dsh，再将新版 Skill 文件同步到 `~/.dsh/skills/explain-everything-to-me`。若 `sivtr` 不在 `PATH`，可传 `--sivtr /绝对路径/sivtr`。这一步无需复制或重建归档，也不要把 `~/.sivtr` 复制进项目目录。
 
 安装脚本复制的是当时的版本。更新仓库不会自动更新各宿主的副本；升级时先检查自己改过的设置，再替换对应副本。
 
