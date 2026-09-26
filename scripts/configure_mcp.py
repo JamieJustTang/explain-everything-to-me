@@ -52,6 +52,41 @@ def configure_antigravity(home: Path, executable: Path) -> None:
     print(f"Configured Antigravity sivtr MCP: {path}")
 
 
+def update_existing(host: str, home: Path, executable: Path) -> None:
+    if host == "antigravity":
+        configure_antigravity(home, executable)
+        return
+    path = {
+        "codex": home / ".codex" / "config.toml",
+        "claude": home / ".claude.json",
+        "gemini": home / ".gemini" / "settings.json",
+        "grok": home / ".grok" / "config.toml",
+    }[host]
+    if path.suffix == ".json":
+        data = json.loads(path.read_text(encoding="utf-8"))
+        server = data["mcpServers"]["sivtr"]
+        if not isinstance(server, dict):
+            raise ValueError(f"Invalid sivtr MCP entry: {path}")
+        server.update({"command": str(executable), "args": ["mcp", "serve"]})
+        updated = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    else:
+        content = path.read_text(encoding="utf-8")
+        section = re.search(r'(?ms)^\[mcp_servers\.(?:sivtr|"sivtr")\]\n(.*?)(?=^\[|\Z)', content)
+        if not section:
+            raise ValueError(f"Invalid sivtr MCP section: {path}")
+        body, count = re.subn(r'(?m)^command\s*=.*$', lambda _: f'command = {json.dumps(str(executable))}', section.group(1), count=1)
+        if count != 1:
+            raise ValueError(f"sivtr MCP command is missing: {path}")
+        updated = content[:section.start(1)] + body + content[section.end(1):]
+    if updated != path.read_text(encoding="utf-8"):
+        temporary = path.with_name(path.name + ".tmp")
+        temporary.write_text(updated, encoding="utf-8")
+        temporary.replace(path)
+        print(f"Updated {host} sivtr MCP: {path}")
+    else:
+        print(f"{host} sivtr MCP already uses: {executable}")
+
+
 def configure(host: str, home: Path, executable: Path) -> None:
     if not executable.is_file() or not os.access(executable, os.X_OK):
         raise ValueError(f"sivtr executable is not available: {executable}")
@@ -62,7 +97,7 @@ def configure(host: str, home: Path, executable: Path) -> None:
         print("Pi core has no built-in MCP client; keep using the sivtr CLI or install a trusted Pi MCP extension.")
         return
     if configured(host, home):
-        print(f"{host} already has a sivtr MCP server; existing configuration was left unchanged.")
+        update_existing(host, home, executable)
         return
     if host == "antigravity":
         configure_antigravity(home, executable)

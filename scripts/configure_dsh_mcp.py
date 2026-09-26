@@ -3,6 +3,7 @@
 
 import argparse
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -11,6 +12,9 @@ ROW_ID = "mcp-explain-everything-sivtr"
 
 
 def find_sivtr(home: Path) -> Path | None:
+    candidate = home / ".local" / "share" / "explain-everything-to-me" / "sivtr" / "bin" / ("sivtr.exe" if os.name == "nt" else "sivtr")
+    if candidate.is_file() and os.access(candidate, os.X_OK):
+        return candidate.resolve()
     found = shutil.which("sivtr")
     if found:
         return Path(found).resolve()
@@ -23,9 +27,25 @@ def configure(dsh_home: Path, executable: Path) -> Path:
         raise SystemExit(f"sivtr executable is not available: {executable}")
     path = dsh_home / "cordis.patch.yml"
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
-    if ROW_ID in existing or "serverName: sivtr" in existing:
-        print(f"Dsh already has a sivtr MCP row: {path}")
+    if ROW_ID in existing:
+        import json
+        updated, count = re.subn(
+            rf"(?m)(^\s+- id: {re.escape(ROW_ID)}\n(?:(?!^\s+- id:|^\s*- insert:).)*?^\s+command: )[^\n]+",
+            lambda match: match.group(1) + json.dumps(str(executable)),
+            existing,
+            count=1,
+            flags=re.DOTALL,
+        )
+        if count != 1:
+            raise SystemExit(f"Could not update the managed Dsh MCP row: {path}")
+        if updated != existing:
+            path.write_text(updated, encoding="utf-8")
+            print(f"Updated Dsh sivtr MCP: {path}")
+        else:
+            print(f"Dsh sivtr MCP already uses: {executable}")
         return path
+    if "serverName: sivtr" in existing:
+        raise RuntimeError(f"Dsh has an unmanaged sivtr MCP row; update its command to {executable}: {path}")
     lines = [line.strip() for line in existing.splitlines() if line.strip() and not line.lstrip().startswith("#")]
     if lines and lines != ["[]"] and not lines[0].startswith("- "):
         raise SystemExit(f"Unsupported Dsh patch format; add the MCP row manually: {path}")

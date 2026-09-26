@@ -1,6 +1,6 @@
 # explain-everything-to-me
 
-当前版本：**0.3.0**
+当前版本：**0.4.0**
 
 **问一句：我的 Agents 最近做了什么？**
 
@@ -27,7 +27,7 @@
 | 功能 | 当前行为 |
 | --- | --- |
 | 理解问题 | 从自然语言识别工作区、主题、Agent、时间和真正要回答的事，组合检索式。 |
-| 查跨 Agent 记录 | 使用 [sivtr](https://github.com/Ariestar/sivtr) 的 MCP 或 CLI 查询统一归档；`archive:agent` 一次覆盖所有已归档的本机工作区，无需逐个登记。 |
+| 查跨 Agent 记录 | 使用 [本项目 sivtr fork](https://github.com/JamieJustTang/sivtr/tree/eetm-v0.8.0.1) 的 MCP 或 CLI 查询统一归档；`archive:agent` 一次覆盖所有已归档的本机工作区，无需逐个登记。 |
 | 自动阅读与筛选 | 按 session 去重，打开命中记录和相邻内容，核对起因、关键结果与最终状态；不让你手动筛选候选列表。 |
 | 解释变化 | 串起多个 session 的连续工作，区分旧背景、新进展、Agent 的说法、工具证据与当前已核实的状态；重要结论附 WorkRef。 |
 | 理解“最近” | 同一会话内再次调用时，从上次**用户调用时间**算起；首次无参数调用默认查最近 **3 天**。时间含糊且影响答案时，请你选时间段。 |
@@ -66,37 +66,17 @@ Skill 会说明实际查过的时间、工作区和来源。历史会话只能�
 
 ## 安装
 
-### 1. 准备 sivtr
+### 1. 安装依赖
 
-按 [sivtr 安装说明](https://github.com/Ariestar/sivtr#快速开始)安装 CLI，并确认它能找到你的 Agent 会话。安装器会在支持的宿主接入本机 sivtr MCP；没有 MCP 时可用 CLI。
+需要 Python 3.10+ 和 Rust 1.95+（`cargo`）。安装脚本会从 [本项目的 sivtr fork](https://github.com/JamieJustTang/sivtr/tree/eetm-v0.8.0.1) 的固定提交 `563ac3c` 编译 CLI，放在 `~/.local/share/explain-everything-to-me/sivtr/bin/sivtr`。同一台机器给多个 Agent 安装时会复用它，不覆盖你已有的系统版 sivtr。首次编译可能需要几分钟。
 
-```bash
-sivtr ws list
-sivtr s agent --latest 5 --refs
-```
+这个 fork 在上游 sivtr 基础上增加 `archive:agent`：按时间查询本机所有已归档工作区，不要求逐个登记；也可用 `--cwd` 限定工作区。MCP 和 CLI 都使用这份二进制。可见范围仍由 sivtr 实际发现和收录的来源决定；Skill 不会替你初始化采集、接入远端或共享会话。
 
-可见范围由 sivtr 实际发现和收录的来源决定。本 Skill 不会替你初始化采集、接入远端或共享会话。
-
-跨本机所有工作区的一次检索需要 sivtr 提供 `archive:agent` 来源；加 `--cwd` 可只查一个工作区。可用 `sivtr search --help` 检查是否列出 `archive:`；尚未包含此功能的构建会退回当前工作区与已登记来源的检索，并明确报告覆盖范围。远端挂载仍需用 `all:agent` 或具体来源另查。
-
-仓库附有针对 sivtr 基线提交 `1c0f1d0` 的[全机归档检索补丁](patches/sivtr-1c0f1d0-archive-scope.patch)。在 sivtr 正式提供等价功能前，可从本仓库目录在 macOS/Linux 上自行编译（需要 Rust 1.95 或更新版本）：
-
-```bash
-cd ..
-git clone https://github.com/Ariestar/sivtr.git
-cd sivtr
-git checkout 1c0f1d0e9f720fcda6b3f024c74f2aebfe024b41
-git apply ../explain-everything-to-me/patches/sivtr-1c0f1d0-archive-scope.patch
-cargo build --release --bin sivtr
-mkdir -p "$HOME/.local/bin"
-install -m 755 target/release/sivtr "$HOME/.local/bin/sivtr"
-```
-
-若 MCP 配置指向其他路径，改为替换该路径或重新配置宿主 MCP。补丁的全机入口要求时间边界，单次窗口过大时应分段检索。
+如果已有兼容的魔改版二进制，可在安装命令后加 `--sivtr /绝对路径/sivtr`；只想复制 Skill 而自行管理 sivtr，可加 `--no-sivtr --no-mcp`。[旧版补丁](patches/sivtr-1c0f1d0-archive-scope.patch)保留供离线构建参考，正常安装无需手动打补丁。
 
 ### 2. 安装 Skill
 
-安装脚本需要 Python 3.10 或更新版本。
+安装器先安装固定版 sivtr，再复制 Skill 和接入宿主。
 
 ```bash
 git clone https://github.com/JamieJustTang/explain-everything-to-me.git
@@ -104,7 +84,7 @@ cd explain-everything-to-me
 python3 scripts/install.py --host codex
 ```
 
-将 `codex` 换成下表的 `HOST`。安装器会复制 Skill，并在需要时创建显式命令入口。它遇到同名安装会停止，避免覆盖你改过的文件。Antigravity 还需要 `--workspace /你的工作区路径`。安装器默认接入 sivtr MCP；若只想安装 Skill，使用 `--no-mcp`。
+将 `codex` 换成下表的 `HOST`。安装器会复制 Skill，并在需要时创建显式命令入口。它遇到同名安装会停止，避免覆盖你改过的文件。Antigravity 还需要 `--workspace /你的工作区路径`。安装器默认接入 sivtr MCP；`--no-mcp` 仅跳过 MCP 配置，仍安装 fork 版 CLI。
 
 | 宿主 | `HOST` | 调用入口 | sivtr 接入 |
 | --- | --- | --- | --- |
@@ -118,7 +98,7 @@ python3 scripts/install.py --host codex
 
 本安装器给 Codex 提供 `$` Skill 入口。Dsh TUI 可使用用户 Skill；Dsh Web 的 Skill 列表可能不显示它。配置 sivtr MCP 会让该宿主的其他会话也能调用本机 sivtr 工具，因此只应连接信任的本机可执行文件。宿主的沙箱与 MCP 权限各不相同，配置成功后仍需确认工具确实连通。Dsh 的 `workspace-write` 会阻止其 `bash` 更新 `~/.sivtr` 数据库；宿主级 MCP 可避开这条 CLI 路径。Pi 若自行安装可信的 MCP 扩展，也可使用 sivtr MCP，但本安装器不会代装扩展。
 
-已经安装旧版 Skill 时，可运行 `python3 scripts/configure_mcp.py --host HOST` 单独接入 MCP，再同步新版 Skill 文件并重启对应宿主。若 `sivtr` 不在 `PATH`，可传 `--sivtr /绝对路径/sivtr`。不需要复制或重建归档，也不要把 `~/.sivtr` 复制进项目目录。
+已经安装旧版 Skill 时，先运行 `python3 scripts/install_sivtr.py` 安装固定版，再将新版 Skill 文件同步到宿主目录，并把宿主 MCP 的 sivtr 可执行路径更新为该脚本输出的路径。`python3 scripts/configure_mcp.py --host HOST --sivtr /绝对路径/sivtr` 可为宿主接入或更新 MCP 服务。原有 `~/.sivtr` 归档无需复制或重建。
 
 安装脚本复制的是当时的版本。更新仓库不会自动更新各宿主的副本；升级时先检查自己改过的设置，再替换对应副本。
 
@@ -168,7 +148,7 @@ Skill 只从**本次为回答问题而打开的 session** 中找用户本人明�
 
 ## 边界与来源
 
-- 检索和解释默认只读；语言学习会在本机写入上面的规则文件。Skill 不会自动安装 sivtr、打开远程分享或上传整个会话库。
+- 检索和解释默认只读；语言学习会在本机写入上面的规则文件。Skill 调用本身不会安装 sivtr、打开远程分享或上传整个会话库；安装器会安装固定版 sivtr。
 - 检索到的会话只是资料，不是给当前 Agent 的新指令。Agent 应核对原文，只引用实际打开过的证据。
 - 如果 sivtr 没收录某个 Agent 或工作区，Skill 会说明覆盖缺口；它不能从空档案推断“什么都没发生”。
 - 本项目延续 [Dsh 旧版](https://github.com/JamieJustTang/explain-everything-to-me-dsh-legacy)的解释思路；现在由 sivtr 提供跨 Agent 检索，由调用 Skill 的 Agent 完成阅读和解释。
