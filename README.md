@@ -33,14 +33,14 @@
 | 解释变化 | 串起多个 session 的连续工作，区分旧背景、新进展、Agent 的说法、工具证据与当前已核实的状态；重要结论附 WorkRef。 |
 | 可自定义汇报 | 默认先给短版结论；可切换按工作区详读或待决事项模板，也可用自己的 Markdown 模板覆盖。 |
 | 理解“最近” | 同一会话内再次调用时，从上次**用户调用时间**算起；首次无参数调用默认查最近 **3 天**。时间含糊且影响答案时，请你选时间段。 |
-| 可选 Jev 排序 | [jev-rag-retrieval](https://github.com/JamieJustTang/jev-rag-retrieval) 分别给候选 session 和内部段落排序；没有 Jev 也能使用。 |
+| 可选 RAG + Jev | sivtr 召回候选，[jev-rag-retrieval](https://github.com/JamieJustTang/jev-rag-retrieval) 用 Jev 分别重排 session 和内部段落，Agent 再读原文核对。推荐长会话、多工作区用户配置自己的 Jev API；不配置也能使用。 |
 | 调整表达 | 内置 [STE 中文魔改规则](references/ste-language-improvement.md)，并从已读会话中的用户原话学习通用或项目特定的表达习惯。 |
 
 ```mermaid
 flowchart LR
     A[你的问题] --> B[确定时间与范围]
     B --> C[sivtr 查找候选]
-    C --> D[可选：Jev 排序]
+    C --> D[可选：Jev 重排会话与段落]
     D --> E[打开原文并核对]
     E --> F[理解目标与工作性质]
     F --> G[选模板解释并附引用]
@@ -147,15 +147,15 @@ python3 scripts/install.py --host codex
 
 例如：“用中文解释；我是产品经理，熟悉用户研究和统计；首次调用的‘最近’按 48 小时算；一次最多纳入 8 条 session。”若要让这些设置长期生效，请安装 Agent 在安装前写入 Skill；已安装时须同步修改各宿主副本。只在聊天里说一次，不会自动保存为永久设置。Agent 代你安装后会提醒你提供这些可选偏好，不会擅自保存职业等个人信息。
 
-## 可选：Jev 增强检索
+## 推荐的可选技术栈：RAG + Jev
 
-先用 sivtr 找到足够宽的候选，再让 Jev 排序 session 和内部段落。Jev 只能重排已有候选，不能找回 sivtr 漏掉的会话。没有 Jev 或 API key 时，Skill 继续用 sivtr 本地结果。[完整流程](references/jev-retrieval.md)
+如果你的会话多、工作区分散，推荐配置 [jev-rag-retrieval](https://github.com/JamieJustTang/jev-rag-retrieval) 和自己的 TypeSafe Jev API。技术流程是 **sivtr 召回候选 → Jev 语义重排 session 与会话内段落 → Agent 打开原文核对并回答**。这是一条可选的 RAG 增强路径；没有 Jev 或 API key 时，Skill 继续用 sivtr 本地检索。Jev 只重排已有候选，不能找回 sivtr 漏掉的会话。[完整流程](references/jev-retrieval.md)
 
 ```bash
 uv tool install 'git+https://github.com/JamieJustTang/jev-rag-retrieval.git' --with typesafe-sdk
 ```
 
-如需使用 Jev，在自己的私有环境中配置 `TYPESAFE_API_KEY`。不要把密钥发进聊天、写入命令参数或提交到仓库。Jev 会收到当前问题与选中的候选短片段；若要求全程本地处理，可以不配置 Jev，或让 Agent 使用 `jev-rag --no-jev`。安装 Agent 应提醒你可以自行配置密钥，但不能替你索取或公开密钥。
+安装后，在自己的私有环境中配置 `TYPESAFE_API_KEY`，让运行 Skill 的 CLI Agent 能继承这个环境变量。不要把密钥发进聊天、写入命令参数或提交到仓库。Jev 会收到当前问题与选中的候选短片段；若要求全程本地处理，可以不配置 Jev，或让 Agent 使用 `jev-rag --no-jev`。安装 Agent 应提醒你可以自行配置密钥，但不能替你索取或公开密钥。
 
 ## 表达习惯如何学习
 
