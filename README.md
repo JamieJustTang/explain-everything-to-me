@@ -1,6 +1,6 @@
 # explain-everything-to-me
 
-当前版本：**0.6.0**
+当前版本：**0.6.1**
 
 **问一句：我的 Agents 最近做了什么？**
 
@@ -113,9 +113,11 @@ python3 scripts/install.py --host codex
 | Grok Build | `grok` | `/explain-everything-to-me` | 安装器用原生命令配置 MCP |
 | [Pi](https://pi.dev/) | `pi` | `/explain-everything-to-me` | 核心程序无内置 MCP；默认用 sivtr CLI |
 
-本安装器给 Codex 提供 `$` Skill 入口。Dsh TUI 可使用用户 Skill；Dsh Web 的 Skill 列表可能不显示它。配置 sivtr MCP 会让该宿主的其他会话也能调用本机 sivtr 工具，因此只应连接信任的本机可执行文件。宿主的沙箱与 MCP 权限各不相同，配置成功后仍需确认工具确实连通。Dsh 的 `workspace-write` 会阻止其 `bash` 更新 `~/.sivtr` 数据库；宿主级 MCP 可避开这条 CLI 路径。Pi 若自行安装可信的 MCP 扩展，也可使用 sivtr MCP，但本安装器不会代装扩展。
+本安装器给 Codex 提供 `$` Skill 入口。Dsh TUI 可使用用户 Skill；Dsh Web 的 Skill 列表可能不显示它。配置 sivtr MCP 会让该宿主的其他会话也能调用本机 sivtr 工具，因此只应连接信任的本机可执行文件。宿主的沙箱与 MCP 权限各不相同，配置成功后仍需确认工具确实连通。安装器使用 `sivtr mcp serve --idle-exit 0`：服务随宿主连接保持运行，避免 sivtr 默认空闲 60 秒退出后，宿主首次调用报 `Transport closed`。Dsh 的 `workspace-write` 会阻止其 `bash` 更新 `~/.sivtr` 数据库；宿主级 MCP 可避开这条 CLI 路径。Pi 若自行安装可信的 MCP 扩展，也可使用 sivtr MCP，但本安装器不会代装扩展。
 
 已经安装旧版 Skill 时，先运行 `python3 scripts/install_sivtr.py` 安装固定版，再将新版 Skill 文件同步到宿主目录，并把宿主 MCP 的 sivtr 可执行路径更新为该脚本输出的路径。`python3 scripts/configure_mcp.py --host HOST --sivtr /绝对路径/sivtr` 可为宿主接入或更新 MCP 服务。原有 `~/.sivtr` 归档无需复制或重建。
+
+若已有安装在等待阅读、检索或其他操作后报 `Transport closed`，检查该宿主的 sivtr MCP 参数是否含 `--idle-exit 0`。运行上面的 `configure_mcp.py` 更新参数，再新开宿主会话；当前会话可以按 Skill 规则用 CLI 继续只读检索。
 
 安装脚本复制的是当时的版本。更新仓库不会自动更新各宿主的副本；升级时先检查自己改过的设置，再替换对应副本。
 

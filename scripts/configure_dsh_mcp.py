@@ -9,6 +9,7 @@ from pathlib import Path
 
 
 ROW_ID = "mcp-explain-everything-sivtr"
+MCP_ARGS = "['mcp', 'serve', '--idle-exit', '0']"
 
 
 def find_sivtr(home: Path) -> Path | None:
@@ -29,15 +30,27 @@ def configure(dsh_home: Path, executable: Path) -> Path:
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
     if ROW_ID in existing:
         import json
-        updated, count = re.subn(
-            rf"(?m)(^\s+- id: {re.escape(ROW_ID)}\n(?:(?!^\s+- id:|^\s*- insert:).)*?^\s+command: )[^\n]+",
-            lambda match: match.group(1) + json.dumps(str(executable)),
+        section = re.search(
+            rf"(?ms)^\s+- id: {re.escape(ROW_ID)}\n(?:(?!^\s+- id:|^\s*- insert:).)*",
             existing,
-            count=1,
-            flags=re.DOTALL,
+        )
+        if not section:
+            raise SystemExit(f"Could not update the managed Dsh MCP row: {path}")
+        body, count = re.subn(
+            r"(?m)^(\s+command: ).*$",
+            lambda match: match.group(1) + json.dumps(str(executable)),
+            section.group(0), count=1,
         )
         if count != 1:
-            raise SystemExit(f"Could not update the managed Dsh MCP row: {path}")
+            raise SystemExit(f"Dsh MCP command is missing: {path}")
+        body, count = re.subn(
+            r"(?m)^(\s+args: ).*$",
+            lambda match: match.group(1) + MCP_ARGS,
+            body, count=1,
+        )
+        if count != 1:
+            raise SystemExit(f"Dsh MCP args are missing: {path}")
+        updated = existing[:section.start()] + body + existing[section.end():]
         if updated != existing:
             path.write_text(updated, encoding="utf-8")
             print(f"Updated Dsh sivtr MCP: {path}")
@@ -61,7 +74,7 @@ def configure(dsh_home: Path, executable: Path) -> Path:
         "        serverName: sivtr\n"
         "        transport: stdio\n"
         f"        command: {json.dumps(str(executable))}\n"
-        "        args: ['mcp', 'serve']\n"
+        f"        args: {MCP_ARGS}\n"
         "        toolCallTimeoutMs: 120000\n"
     )
     prefix = "" if not existing or lines == ["[]"] else existing.rstrip() + "\n\n"

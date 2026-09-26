@@ -12,11 +12,13 @@ from configure_dsh_mcp import configure as configure_dsh
 from configure_dsh_mcp import find_sivtr
 
 
+MCP_ARGS = ["mcp", "serve", "--idle-exit", "0"]
+
 NATIVE_COMMANDS = {
-    "codex": lambda exe: ["codex", "mcp", "add", "sivtr", "--", str(exe), "mcp", "serve"],
-    "claude": lambda exe: ["claude", "mcp", "add", "--scope", "user", "sivtr", "--", str(exe), "mcp", "serve"],
-    "gemini": lambda exe: ["gemini", "mcp", "add", "--scope", "user", "sivtr", str(exe), "mcp", "serve"],
-    "grok": lambda exe: ["grok", "mcp", "add", "--scope", "user", "sivtr", "--", str(exe), "mcp", "serve"],
+    "codex": lambda exe: ["codex", "mcp", "add", "sivtr", "--", str(exe), *MCP_ARGS],
+    "claude": lambda exe: ["claude", "mcp", "add", "--scope", "user", "sivtr", "--", str(exe), *MCP_ARGS],
+    "gemini": lambda exe: ["gemini", "mcp", "add", "--scope", "user", "sivtr", str(exe), *MCP_ARGS],
+    "grok": lambda exe: ["grok", "mcp", "add", "--scope", "user", "sivtr", "--", str(exe), *MCP_ARGS],
 }
 
 
@@ -44,7 +46,7 @@ def configure_antigravity(home: Path, executable: Path) -> None:
     data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     if not isinstance(data, dict) or not isinstance(data.get("mcpServers", {}), dict):
         raise ValueError(f"Invalid Antigravity MCP config: {path}")
-    data.setdefault("mcpServers", {})["sivtr"] = {"command": str(executable), "args": ["mcp", "serve"]}
+    data.setdefault("mcpServers", {})["sivtr"] = {"command": str(executable), "args": MCP_ARGS}
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".tmp")
     temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -67,7 +69,7 @@ def update_existing(host: str, home: Path, executable: Path) -> None:
         server = data["mcpServers"]["sivtr"]
         if not isinstance(server, dict):
             raise ValueError(f"Invalid sivtr MCP entry: {path}")
-        server.update({"command": str(executable), "args": ["mcp", "serve"]})
+        server.update({"command": str(executable), "args": MCP_ARGS})
         updated = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     else:
         content = path.read_text(encoding="utf-8")
@@ -77,6 +79,10 @@ def update_existing(host: str, home: Path, executable: Path) -> None:
         body, count = re.subn(r'(?m)^command\s*=.*$', lambda _: f'command = {json.dumps(str(executable))}', section.group(1), count=1)
         if count != 1:
             raise ValueError(f"sivtr MCP command is missing: {path}")
+        args_line = f'args = {json.dumps(MCP_ARGS)}'
+        body, count = re.subn(r'(?m)^args\s*=.*$', lambda _: args_line, body, count=1)
+        if count != 1:
+            body = args_line + "\n" + body
         updated = content[:section.start(1)] + body + content[section.end(1):]
     if updated != path.read_text(encoding="utf-8"):
         temporary = path.with_name(path.name + ".tmp")
