@@ -1,6 +1,6 @@
 # explain-everything-to-me
 
-当前版本：**0.4.0**
+当前版本：**0.5.0**
 
 **问一句：我的 Agents 最近做了什么？**
 
@@ -30,6 +30,7 @@
 | 查跨 Agent 记录 | 使用 [本项目 sivtr fork](https://github.com/JamieJustTang/sivtr/tree/eetm-v0.8.0.1) 的 MCP 或 CLI 查询统一归档；`archive:agent` 一次覆盖所有已归档的本机工作区，无需逐个登记。 |
 | 自动阅读与筛选 | 按 session 去重，打开命中记录和相邻内容，核对起因、关键结果与最终状态；不让你手动筛选候选列表。 |
 | 解释变化 | 串起多个 session 的连续工作，区分旧背景、新进展、Agent 的说法、工具证据与当前已核实的状态；重要结论附 WorkRef。 |
+| 可自定义汇报 | 默认先给短版结论；可切换按工作区详读或待决事项模板，也可用自己的 Markdown 模板覆盖。 |
 | 理解“最近” | 同一会话内再次调用时，从上次**用户调用时间**算起；首次无参数调用默认查最近 **3 天**。时间含糊且影响答案时，请你选时间段。 |
 | 可选 Jev 排序 | [jev-rag-retrieval](https://github.com/JamieJustTang/jev-rag-retrieval) 分别给候选 session 和内部段落排序；没有 Jev 也能使用。 |
 | 调整表达 | 内置 [STE 中文魔改规则](references/ste-language-improvement.md)，并从已读会话中的用户原话学习通用或项目特定的表达习惯。 |
@@ -50,19 +51,33 @@ flowchart LR
 下面仅示意结构，不是真实检索结果：
 
 ```text
-检索范围：本会话上次调用时间 → 本次调用时间（Asia/Shanghai）
+先说结论：工作区 A 修好了数据解析问题，测试记录显示通过。旧格式兼容层仍待选择。
 
-工作区 A
-- 已完成：数据解析流程已修改；测试记录显示通过。[sivtr WorkRef]
-- 待决定：旧格式兼容层有两种方案，记录中尚未见到你的决定。[sivtr WorkRef]
+按工作区
+- A：解析流程已改，测试通过；兼容层尚未定案。[sivtr WorkRef]
+- B：本次时间范围内未发现新增工作。
 
-工作区 B
-- 本次时间范围内未找到新增会话；说明已检查的来源和工作区。
+需要你处理：决定 A 是否继续支持旧格式；记录中还没有你的选择。[sivtr WorkRef]
+
+范围与限制：本会话上次调用时间 → 本次调用时间；已查本机归档，未查未接入的远端。
 
 下次“最近”从这里算：YYYY-MM-DDTHH:MM:SS+08:00（本次用户调用时间）
 ```
 
 Skill 会说明实际查过的时间、工作区和来源。历史会话只能证明当时记录了什么；若你问的是“现在是否已完成”，且没有限定只能看档案，Agent 会另查当前文件或状态。缺失记录、来源冲突和未核实的推断会明确标出。
+
+## 汇报模板
+
+默认使用[速览](templates/brief.md)：先给结论，再用短句按工作区说明变化、阻塞和需要你处理的事。要求详细复盘时用[按工作区详读](templates/workspace.md)；只问“哪些事需要我决定”时用[待决事项](templates/decisions.md)。你也可以在命令里明确说“用 workspace 模板，重点讲 C7”。具体问题仍由问题本身决定答案，不强行塞进固定栏目。
+
+要长期调整默认结构，复制速览模板到用户目录再修改标题、顺序、篇幅等：
+
+```bash
+mkdir -p "$HOME/.explain-everything-to-me/templates"
+cp templates/brief.md "$HOME/.explain-everything-to-me/templates/default.md"
+```
+
+也可以在该目录放 `brief.md`、`workspace.md` 或 `decisions.md`，覆盖对应内置模板。这个目录由所有宿主共用，升级 Skill 时不会覆盖。模板只影响汇报的呈现，不能改变检索范围、证据要求或 Skill 的调用条件；文件读不到时会回退到内置模板。
 
 ## 安装
 
