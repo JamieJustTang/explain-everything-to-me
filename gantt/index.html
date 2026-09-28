@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>研究航程 · 甘特图</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="rail">
+      <div class="brand"><span class="brand-mark">E</span><div><strong>研究航程</strong><small>EXPLAIN EVERYTHING TO ME</small></div></div>
+      <div class="rail-label">甘特图 <button id="new-chart" class="icon-btn" aria-label="新建甘特图">＋</button></div>
+      <nav id="chart-list" aria-label="甘特图列表"></nav>
+      <div class="rail-bottom"><span class="pulse"></span><span id="sync-state">读取中</span></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div><span class="eyebrow">RESEARCH COMMAND CENTER</span><h1 id="chart-title">科研总览</h1><p id="chart-description"></p></div><div class="top-actions"><button id="edit-chart" class="ghost">图表设置</button><button id="new-project" class="ghost">＋ 项目</button><button id="new-task" class="primary">＋ 新任务</button></div></header>
+      <section class="overview" id="overview"></section>
+      <section class="chart-card">
+        <div class="section-head"><div><span class="eyebrow">TIMELINE</span><h2>任务时间轴</h2></div><div class="period-controls"><button id="prev-period" class="icon-btn" aria-label="前移两周">←</button><button id="today-period" class="ghost small">回到今天</button><button id="next-period" class="icon-btn" aria-label="后移两周">→</button></div></div>
+        <div id="timeline" class="timeline-scroller" role="region" aria-label="可横向滚动的甘特图" tabindex="0"></div>
+        <div class="legend"><span><i class="dot done"></i>完成</span><span><i class="dot active"></i>进行中</span><span><i class="dot blocked"></i>阻塞</span><span><i class="dot planned"></i>计划</span><span><i class="diamond"></i>项目 DDL</span></div>
+      </section>
+      <section class="below-grid"><div class="backlog card"><div class="section-head"><div><span class="eyebrow">UNSCHEDULED</span><h2>待排期</h2></div><span id="backlog-count" class="count"></span></div><div id="backlog-list"></div></div><div class="agent-card card"><span class="eyebrow">AGENT ASSISTED</span><h2>让 Agent 接管更新</h2><p>你可以直接对 Agent 说：“用 explain-everything-to-me 汇报进展，并维护甘特图。”Skill 每次显式调用后，会把已核对的进展写入匹配的图表。你手动修改的任务字段会保留。</p><div class="agent-foot"><span>自动同步</span><strong id="auto-sync-pill">已开启</strong></div><small>会话证据决定状态；你决定排期与 DDL。</small></div></section>
+      <footer>本机数据 · 仅在你显式调用 Skill 时同步 · 时间均按浏览器本地日期显示</footer>
+    </main>
+  </div>
+  <dialog id="editor"><form id="editor-form" method="dialog"><div class="dialog-head"><div><span class="eyebrow" id="editor-eyebrow"></span><h2 id="editor-title"></h2></div><button class="icon-btn" value="cancel" aria-label="关闭">×</button></div><div id="editor-fields"></div><div class="dialog-actions"><button type="button" id="delete-entity" class="danger ghost">删除</button><span></span><button type="button" id="cancel-editor" class="ghost">取消</button><button type="submit" class="primary">保存</button></div></form></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -21,7 +21,7 @@ def copy_bundle(destination: Path, *, user_only: bool) -> None:
     if destination.exists():
         raise SystemExit(f"Target already exists; review it before replacing: {destination}")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(SOURCE, destination, ignore=shutil.ignore_patterns(".git", ".DS_Store", "__pycache__", "*.pyc"))
+    shutil.copytree(SOURCE, destination, ignore=shutil.ignore_patterns(".git", ".DS_Store", "__pycache__", "*.pyc", "tests"))
     if user_only:
         skill = destination / "SKILL.md"
         content = skill.read_text(encoding="utf-8")
@@ -111,6 +111,7 @@ def main() -> None:
         print(f"Command adapter: {command}")
     print("Optional: tell the agent your working language, role, familiar fields, usual meaning of 'recent', and maximum sessions per answer.")
     print("Optional report layout: edit ~/.explain-everything-to-me/templates/default.md or ask for brief, workspace, or decisions.")
+    print("Optional Gantt board: run python3 <installed-skill>/scripts/gantt.py serve, then open http://127.0.0.1:8765/.")
     print("Optional Jev reranking: install jev-rag-retrieval and configure your own TYPESAFE_API_KEY in a private environment file; never put the key in chat or this repository.")
 
 
