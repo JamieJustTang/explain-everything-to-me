@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "gantt.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "components" / "gantt" / "gantt.py"
 SPEC = importlib.util.spec_from_file_location("eetm_gantt", SCRIPT)
 gantt = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gantt)

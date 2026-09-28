@@ -1,6 +1,6 @@
 # explain-everything-to-me
 
-当前版本：**0.7.0**
+当前版本：**0.8.0**
 
 **问一句：我的 Agents 最近做了什么？**
 
@@ -32,7 +32,7 @@
 | 理解你在做什么 | 从用户原话与会话证据辨认目标、交付物和完成标准，再按工作性质组织进展；同一目标跨工作区时连起来，不同目标共用目录时分开。 |
 | 解释变化 | 串起多个 session 的连续工作，区分旧背景、新进展、Agent 的说法、工具证据与当前已核实的状态；重要结论附 WorkRef。 |
 | 可自定义汇报 | 默认先给短版结论；可切换按工作区详读或待决事项模板，也可用自己的 Markdown 模板覆盖。 |
-| 本机甘特图 | 可点击查看和编辑任务、项目 DDL，建立多张分类图。每次显式调用后，根据已核对的会话证据同步匹配任务；手动修改的字段不会被自动覆盖。 |
+| 可选甘特图组件 | 可点击查看和编辑任务、项目 DDL，建立多张分类图。每次显式调用后，根据已核对的会话证据同步匹配任务；手动修改的字段不会被自动覆盖。 |
 | 理解“最近” | 同一会话内再次调用时，从上次**用户调用时间**算起；首次无参数调用默认查最近 **3 天**。时间含糊且影响答案时，请你选时间段。 |
 | 可选 RAG + Jev | sivtr 召回候选，[jev-rag-retrieval](https://github.com/JamieJustTang/jev-rag-retrieval) 用 Jev 分别重排 session 和内部段落，Agent 再读原文核对。推荐长会话、多工作区用户配置自己的 Jev API；不配置也能使用。 |
 | 调整表达 | 内置 [STE 中文魔改规则](references/ste-language-improvement.md)，并从已读会话中的用户原话学习通用或项目特定的表达习惯。 |
@@ -111,21 +111,27 @@ cp templates/brief.md "$HOME/.explain-everything-to-me/templates/default.md"
 
 在同一目录放 `brief.md`、`workspace.md` 或 `decisions.md`，可分别覆盖内置版本。例如，把 `templates/workspace.md` 复制到 `~/.explain-everything-to-me/templates/workspace.md` 后修改，命令里说“用 workspace 模板”就会使用你的版本。
 
-也可以新建 `~/.explain-everything-to-me/templates/research.md`，然后调用 `/explain-everything-to-me 用 research 模板，复盘 Social Reflexes`。自定义名称必须在命令里点名；只读取这次选中的模板。该用户目录由所有宿主共用，升级 Skill 时不会覆盖。模板只控制呈现方式和详略，不能改变检索范围、证据要求或显式调用条件；模板缺失或不可读时会回退到合适的内置版本并说明。
+也可以新建 `~/.explain-everything-to-me/templates/research.md`，然后调用 `/explain-everything-to-me 用 research 模板，复盘示例项目`。自定义名称必须在命令里点名；只读取这次选中的模板。该用户目录由所有宿主共用，升级 Skill 时不会覆盖。模板只控制呈现方式和详略，不能改变检索范围、证据要求或显式调用条件；模板缺失或不可读时会回退到合适的内置版本并说明。
 
-## 可交互科研甘特图
+## 可选组件：奋斗在DDL的前列
 
-在仓库根目录运行；如果你只保留了安装副本，将路径换成该副本的 `scripts/gantt.py`：
+这是可交互的本机甘特图，可创建多张图，点击编辑项目、任务、日期、进度和 DDL。没有确定日期的任务留在“待排期”。每张图都可单独设置是否允许 Agent 同步。安装后启动：
 
 ```bash
-python3 scripts/gantt.py serve
+python3 components/gantt/gantt.py serve
 ```
 
-打开 `http://127.0.0.1:8765/`。页面可以点击项目或任务查看详情，新增和删除任务，修改起止时间、完成比例与项目 DDL。没有确定日期的任务留在“待排期”，不会被画成一个假的时间条。点击左侧的 `＋` 可以创建多张图，例如“AAMAS 投稿”“长期研究”；每张图独立选择项目，并可单独关闭 Agent 自动同步。
+打开 `http://127.0.0.1:8765/`。Agent 只在你显式调用 Skill 时，用本次打开并核对的会话证据同步工作区路径精确匹配的任务。手动修改的字段和项目 DDL 会保留。组件未安装时，Skill 跳过同步。详细规则见[甘特图同步说明](references/gantt-sync.md)。
 
-数据保存在本机 `~/.explain-everything-to-me/gantt/data.json`，七个宿主共用。你也可以直接告诉 Agent：“用 explain-everything-to-me 汇报今天的进展，并维护甘特图。”**只有显式调用本 Skill 才会触发同步检查**。Agent 只根据本次已打开并核对的会话更新工作区路径匹配的任务；它不会改写你手动设置的日期、任务文字或项目 DDL。没有可靠证据时只记录本次检查，不编造完成比例。同步规则与 JSON 事件格式见[甘特图同步说明](references/gantt-sync.md)。
+安装后的看板默认是空的。若想试用纯虚构数据，可在**空看板**上运行：
 
-图表首次安装为空。你可以在页面添加项目和工作区绝对路径，之后每次调用便会同步匹配项目。页面服务只监听 `127.0.0.1`，由 Python 标准库运行，不需要 npm 或外部账号。
+```bash
+python3 components/gantt/gantt.py seed --input components/gantt/example.json
+```
+
+[示例数据](components/gantt/example.json)只有虚构项目、演示路径和日期，自动同步默认关闭；不含作者的真实项目、工作区或会话。种子命令不会覆盖已有图表。实际数据保存在本机 `~/.explain-everything-to-me/gantt/data.json`，不进入仓库；多个宿主安装副本共用这份数据。服务只监听 `127.0.0.1`，依赖 Python 标准库。
+
+仓库把功能分成核心 Skill（`SKILL.md`、`scripts/`、`references/`、`templates/`）和 `components/<组件 ID>/`。每个可选组件有自己的 `component.json`，安装器会发现并列出它们。以后新增组件无需改动核心安装布局。
 
 ## 安装
 
@@ -139,13 +145,22 @@ python3 scripts/gantt.py serve
 
 ### 2. 安装 Skill
 
-安装器先安装固定版 sivtr，再复制 Skill 和接入宿主。
+安装器先询问可选组件（交互终端），再安装固定版 sivtr、复制核心 Skill 和选中的组件，并接入宿主。**如果由 Agent 代装，Agent 应先询问你要哪些可选组件，不能自行选择。**
 
 ```bash
 git clone https://github.com/JamieJustTang/explain-everything-to-me.git
 cd explain-everything-to-me
 python3 scripts/install.py --host codex
 ```
+
+当前可选组件：`gantt`（“奋斗在DDL的前列”）。交互终端会询问是否安装；非交互运行默认只装核心。由 Agent 安装时，先询问用户，再明确传参：
+
+```bash
+python3 scripts/install.py --host codex --component gantt  # 安装甘特图
+python3 scripts/install.py --host codex --no-components    # 仅安装核心
+```
+
+今后可多次使用 `--component ID` 选择多个组件。安装器只复制被选中的组件；要给已有安装增加组件，先检查该安装副本的自定义改动，再从仓库复制对应的 `components/<ID>/` 目录。
 
 将 `codex` 换成下表的 `HOST`。安装器会复制 Skill，并在需要时创建显式命令入口。它遇到同名安装会停止，避免覆盖你改过的文件。Antigravity 还需要 `--workspace /你的工作区路径`。安装器默认接入 sivtr MCP；`--no-mcp` 仅跳过 MCP 配置，仍安装 fork 版 CLI。
 

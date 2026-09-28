@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "last_sync_at": null,
+  "charts": [
+    {
+      "id": "example-board",
+      "name": "示例：项目计划",
+      "description": "纯演示数据。请改成自己的项目、日期和工作区。",
+      "auto_sync": false,
+      "projects": [
+        {
+          "id": "example-project",
+          "name": "示例项目",
+          "workspace": "/example/workspace/project",
+          "deadline_date": "2027-06-30",
+          "deadline_label": "示例 DDL",
+          "deadline_url": "",
+          "deadline_zone": "本地日期"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "example-task",
+          "project_id": "example-project",
+          "sync_key": null,
+          "source": "manual",
+          "manual_fields": ["title", "start", "due", "status", "progress", "notes"],
+          "workrefs": [],
+          "evidence_at": null,
+          "updated_at": "2027-01-01T00:00:00+00:00",
+          "title": "整理第一版方案",
+          "start": "2027-06-01",
+          "due": "2027-06-12",
+          "status": "active",
+          "progress": 30,
+          "notes": "这是一条演示任务。"
+        }
+      ],
+      "deleted_sync_keys": []
+    }
+  ]
+}

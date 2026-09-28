@@ -1,0 +1,6 @@
+{
+  "id": "gantt",
+  "name": "奋斗在DDL的前列",
+  "description": "本机交互甘特图：管理多张图、项目 DDL 和任务；按已核对的会话证据同步进展。",
+  "entrypoint": "gantt.py"
+}

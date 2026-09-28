@@ -2,9 +2,11 @@
 """Install the shared skill with an explicit user command for one supported host."""
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from configure_dsh_mcp import find_sivtr
@@ -17,11 +19,41 @@ SOURCE = Path(__file__).resolve().parents[1]
 USER_ONLY = ("claude", "dsh", "grok")
 
 
-def copy_bundle(destination: Path, *, user_only: bool) -> None:
+def available_components() -> dict[str, dict]:
+    result = {}
+    for manifest in sorted((SOURCE / "components").glob("*/component.json")):
+        item = json.loads(manifest.read_text(encoding="utf-8"))
+        if item.get("id") != manifest.parent.name:
+            raise SystemExit(f"Invalid component manifest: {manifest}")
+        result[item["id"]] = item
+    return result
+
+
+def choose_components(requested: list[str], skip: bool, catalog: dict[str, dict]) -> list[str]:
+    unknown = set(requested) - set(catalog)
+    if unknown:
+        raise SystemExit(f"Unknown component(s): {', '.join(sorted(unknown))}")
+    if skip and requested:
+        raise SystemExit("--component and --no-components cannot be combined")
+    if requested or skip or not sys.stdin.isatty():
+        return list(dict.fromkeys(requested))
+    selected = []
+    for component_id, item in catalog.items():
+        answer = input(f"Install optional component {item['name']} ({component_id})? [y/N] ").strip().lower()
+        if answer in {"y", "yes"}:
+            selected.append(component_id)
+    return selected
+
+
+def copy_bundle(destination: Path, *, user_only: bool, components: list[str] | None = None) -> None:
     if destination.exists():
         raise SystemExit(f"Target already exists; review it before replacing: {destination}")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(SOURCE, destination, ignore=shutil.ignore_patterns(".git", ".DS_Store", "__pycache__", "*.pyc", "tests"))
+    shutil.copytree(SOURCE, destination, ignore=shutil.ignore_patterns(".git", ".DS_Store", ".playwright-cli", "__pycache__", "*.pyc", "tests", "components"))
+    if components:
+        (destination / "components").mkdir()
+        for component_id in components:
+            shutil.copytree(SOURCE / "components" / component_id, destination / "components" / component_id, ignore=shutil.ignore_patterns(".DS_Store", "__pycache__", "*.pyc"))
     if user_only:
         skill = destination / "SKILL.md"
         content = skill.read_text(encoding="utf-8")
@@ -46,7 +78,11 @@ def main() -> None:
     parser.add_argument("--no-mcp", action="store_true", help="Do not configure the host-wide sivtr MCP server")
     parser.add_argument("--sivtr", type=Path, help="Use an existing patched sivtr instead of building the pinned fork")
     parser.add_argument("--no-sivtr", action="store_true", help="Install only the Skill; use a separately managed sivtr")
+    parser.add_argument("--component", action="append", default=[], metavar="ID", help="Install an optional component; repeat for multiple components")
+    parser.add_argument("--no-components", action="store_true", help="Install the core Skill only, without prompting")
     args = parser.parse_args()
+    catalog = available_components()
+    components = choose_components(args.component, args.no_components, catalog)
     home = args.home.expanduser().resolve()
 
     if args.host == "antigravity":
@@ -82,7 +118,7 @@ def main() -> None:
         raise SystemExit(f"sivtr setup failed: {exc}") from exc
     if executable and (not executable.is_file() or not os.access(executable, os.X_OK)):
         raise SystemExit(f"sivtr executable is not available: {executable}")
-    copy_bundle(bundle, user_only=args.host in USER_ONLY)
+    copy_bundle(bundle, user_only=args.host in USER_ONLY, components=components)
     if executable:
         (bundle / "sivtr-path.txt").write_text(str(executable) + "\n", encoding="utf-8")
     if not args.no_mcp:
@@ -111,7 +147,10 @@ def main() -> None:
         print(f"Command adapter: {command}")
     print("Optional: tell the agent your working language, role, familiar fields, usual meaning of 'recent', and maximum sessions per answer.")
     print("Optional report layout: edit ~/.explain-everything-to-me/templates/default.md or ask for brief, workspace, or decisions.")
-    print("Optional Gantt board: run python3 <installed-skill>/scripts/gantt.py serve, then open http://127.0.0.1:8765/.")
+    if "gantt" in components:
+        print("Gantt board: run python3 <installed-skill>/components/gantt/gantt.py serve, then open http://127.0.0.1:8765/.")
+    else:
+        print("Optional components were not installed. Available: " + ", ".join(catalog))
     print("Optional Jev reranking: install jev-rag-retrieval and configure your own TYPESAFE_API_KEY in a private environment file; never put the key in chat or this repository.")
 
 

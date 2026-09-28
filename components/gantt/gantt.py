@@ -17,7 +17,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
-ASSETS = Path(__file__).resolve().parents[1] / "gantt"
+ASSETS = Path(__file__).resolve().parent
 DEFAULT_DATA = Path.home() / ".explain-everything-to-me" / "gantt" / "data.json"
 STATUSES = {"planned", "active", "blocked", "done"}
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
