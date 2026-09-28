@@ -4,36 +4,176 @@
   "charts": [
     {
       "id": "example-board",
-      "name": "示例：项目计划",
-      "description": "纯演示数据。请改成自己的项目、日期和工作区。",
+      "name": "示例计划板",
+      "description": "虚构项目进度，仅供界面演示。",
       "auto_sync": false,
       "projects": [
         {
           "id": "example-project",
-          "name": "示例项目",
+          "name": "示例项目 A · 内容站",
           "workspace": "/example/workspace/project",
-          "deadline_date": "2027-06-30",
-          "deadline_label": "示例 DDL",
+          "deadline_date": "2026-10-16",
+          "deadline_label": "演示发布日期",
+          "deadline_url": "",
+          "deadline_zone": "本地日期"
+        },
+        {
+          "id": "example-app",
+          "name": "示例项目 B · 应用版本",
+          "workspace": "/example/workspace/app",
+          "deadline_date": "2026-10-23",
+          "deadline_label": "版本截止日",
+          "deadline_url": "",
+          "deadline_zone": "本地日期"
+        },
+        {
+          "id": "example-longterm",
+          "name": "示例项目 C · 长期计划",
+          "workspace": "/example/workspace/longterm",
+          "deadline_date": null,
+          "deadline_label": "",
           "deadline_url": "",
           "deadline_zone": "本地日期"
         }
       ],
       "tasks": [
         {
-          "id": "example-task",
+          "id": "example-structure",
           "project_id": "example-project",
           "sync_key": null,
           "source": "manual",
-          "manual_fields": ["title", "start", "due", "status", "progress", "notes"],
+          "manual_fields": [
+            "title",
+            "start",
+            "due",
+            "status",
+            "progress",
+            "notes"
+          ],
           "workrefs": [],
           "evidence_at": null,
-          "updated_at": "2027-01-01T00:00:00+00:00",
-          "title": "整理第一版方案",
-          "start": "2027-06-01",
-          "due": "2027-06-12",
+          "updated_at": "2026-09-28T00:00:00+00:00",
+          "title": "梳理页面结构",
+          "start": "2026-09-25",
+          "due": "2026-09-30",
+          "status": "done",
+          "progress": 100,
+          "notes": "纯演示任务。"
+        },
+        {
+          "id": "example-content",
+          "project_id": "example-project",
+          "sync_key": null,
+          "source": "manual",
+          "manual_fields": [
+            "title",
+            "start",
+            "due",
+            "status",
+            "progress",
+            "notes"
+          ],
+          "workrefs": [],
+          "evidence_at": null,
+          "updated_at": "2026-09-28T00:00:00+00:00",
+          "title": "完成首版内容",
+          "start": "2026-09-29",
+          "due": "2026-10-08",
           "status": "active",
-          "progress": 30,
-          "notes": "这是一条演示任务。"
+          "progress": 55,
+          "notes": "纯演示任务。"
+        },
+        {
+          "id": "example-publish",
+          "project_id": "example-project",
+          "sync_key": null,
+          "source": "manual",
+          "manual_fields": [
+            "title",
+            "start",
+            "due",
+            "status",
+            "progress",
+            "notes"
+          ],
+          "workrefs": [],
+          "evidence_at": null,
+          "updated_at": "2026-09-28T00:00:00+00:00",
+          "title": "发布演示页",
+          "start": "2026-10-09",
+          "due": "2026-10-16",
+          "status": "planned",
+          "progress": 0,
+          "notes": "纯演示任务。"
+        },
+        {
+          "id": "example-feedback",
+          "project_id": "example-app",
+          "sync_key": null,
+          "source": "manual",
+          "manual_fields": [
+            "title",
+            "start",
+            "due",
+            "status",
+            "progress",
+            "notes"
+          ],
+          "workrefs": [],
+          "evidence_at": null,
+          "updated_at": "2026-09-28T00:00:00+00:00",
+          "title": "核对用户反馈",
+          "start": "2026-09-28",
+          "due": "2026-10-06",
+          "status": "blocked",
+          "progress": 25,
+          "notes": "纯演示任务。"
+        },
+        {
+          "id": "example-interaction",
+          "project_id": "example-app",
+          "sync_key": null,
+          "source": "manual",
+          "manual_fields": [
+            "title",
+            "start",
+            "due",
+            "status",
+            "progress",
+            "notes"
+          ],
+          "workrefs": [],
+          "evidence_at": null,
+          "updated_at": "2026-09-28T00:00:00+00:00",
+          "title": "修订交互流程",
+          "start": "2026-10-07",
+          "due": "2026-10-21",
+          "status": "planned",
+          "progress": 0,
+          "notes": "纯演示任务。"
+        },
+        {
+          "id": "example-backlog",
+          "project_id": "example-longterm",
+          "sync_key": null,
+          "source": "manual",
+          "manual_fields": [
+            "title",
+            "start",
+            "due",
+            "status",
+            "progress",
+            "notes"
+          ],
+          "workrefs": [],
+          "evidence_at": null,
+          "updated_at": "2026-09-28T00:00:00+00:00",
+          "title": "整理待办清单",
+          "start": null,
+          "due": null,
+          "status": "planned",
+          "progress": 0,
+          "notes": "纯演示任务。"
         }
       ],
       "deleted_sync_keys": []

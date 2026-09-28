@@ -5,6 +5,17 @@ const today = () => {const d = new Date(); return `${d.getFullYear()}-${String(d
 const dayNumber = (date) => Math.floor(Date.parse(`${date}T00:00:00Z`) / 86400000);
 const dateFromNumber = (number) => new Date(number * 86400000).toISOString().slice(0, 10);
 const state = {data:null, chartId:localStorage.getItem("eetm-chart"), offset:0, editor:null};
+const storedTheme = localStorage.getItem("eetm-gantt-theme");
+function setTheme(theme) {
+  const selected = theme === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = selected;
+  const button = $("#theme-toggle");
+  button.textContent = selected === "light" ? "☾ 夜间" : "☀ 日间";
+  button.setAttribute("aria-label", selected === "light" ? "切换到夜间配色" : "切换到日间配色");
+  localStorage.setItem("eetm-gantt-theme", selected);
+}
+setTheme(storedTheme);
+$("#theme-toggle").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"));
 
 function toast(message) {
   const box = $("#toast"); box.textContent = message; box.style.display = "block";
