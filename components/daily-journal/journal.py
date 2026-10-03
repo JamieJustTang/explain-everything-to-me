@@ -285,12 +285,14 @@ def handler_for(path):
                 self.send_header("Content-Length", str(len(raw)))
                 self.end_headers()
                 return self.wfile.write(raw)
-            file = {"/": "index.html", "/app.js": "app.js", "/styles.css": "styles.css"}.get(route)
+            file = {"/": "index.html", "/app.js": "app.js", "/styles.css": "styles.css",
+                    "/vendor/gsap.min.js": "vendor/gsap.min.js"}.get(route)
             if not file:
                 return self.respond(404, {"error": "Not found"})
             raw = (HERE / file).read_bytes()
             self.send_response(200)
-            self.send_header("Content-Type", {"index.html": "text/html", "app.js": "text/javascript", "styles.css": "text/css"}[file] + "; charset=utf-8")
+            self.send_header("Content-Type", {"index.html": "text/html", "app.js": "text/javascript",
+                                              "styles.css": "text/css", "vendor/gsap.min.js": "text/javascript"}[file] + "; charset=utf-8")
             self.send_header("Content-Length", str(len(raw)))
             self.end_headers()
             self.wfile.write(raw)

@@ -69,3 +69,35 @@
 @media(max-width:1000px){.calendar{max-width:360px}}
 @media(max-width:620px){.side .identity{margin-bottom:15px}.side-label{display:block;padding:0 5px 10px}.calendar{max-width:none}.calendar-day{min-height:41px}.calendar-foot{margin-bottom:4px}}
 @media(prefers-reduced-motion:reduce){.calendar-day.recorded .day-icon{animation:none}}
+
+/* The journal and letter share one reading column. */
+.journal-article{min-height:0;padding-bottom:40px}
+#digest-body{max-width:760px;margin:0 auto}
+.essay-section h2{font-size:clamp(20px,1.8vw,24px)}
+.essay-section p,.essay-closing p{font-size:13.5px;line-height:1.9}
+.letter-section{margin-top:28px;padding:30px 36px 38px;border:1px solid #e5dfd1;border-radius:14px;background:linear-gradient(145deg,#f8f5ec,#fdfcf8 78%)}
+.letter-section[hidden],.letter-paper[hidden],.envelope-scene[hidden]{display:none}
+.letter-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;padding-bottom:17px;border-bottom:1px solid #e9e3d7;color:#8c8173;font-size:11px}
+.letter-heading .small-cap{color:#a46e55}
+.envelope-scene{height:255px;display:grid;place-items:center;perspective:900px;overflow:hidden}
+.envelope-button{position:relative;display:block;width:302px;height:177px;border:0;background:transparent;padding:0;overflow:visible;filter:drop-shadow(0 18px 19px #7869472a);transform-style:preserve-3d}
+.envelope-button:hover{filter:drop-shadow(0 21px 20px #7869473a)}
+.envelope-back,.envelope-flap,.envelope-front{position:absolute;inset:0;border-radius:5px}
+.envelope-back{background:#e7d2b4;border:1px solid #c7ab83}
+.envelope-flap{background:#dfc5a4;clip-path:polygon(0 0,100% 0,50% 68%);z-index:3;backface-visibility:hidden}
+.envelope-front{background:#f0dfc4;clip-path:polygon(0 28%,50% 68%,100% 28%,100% 100%,0 100%);z-index:2;border-bottom:1px solid #d3b994}
+.envelope-seal{position:absolute;z-index:4;left:50%;top:61px;transform:translateX(-50%);display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:#b9775b;color:#fff8ee;font-family:Georgia,"Noto Serif CJK SC",serif;font-size:18px;box-shadow:0 3px 7px #654b3d32}
+.envelope-action{position:absolute;top:calc(100% + 18px);left:0;right:0;color:#7e705f;font-size:12px;font-weight:700;letter-spacing:.08em}
+.letter-paper{max-width:760px;margin:0 auto;background:#fffefa;border:1px solid #e4d8c3;border-radius:8px;box-shadow:0 18px 45px #665e4524;padding:34px clamp(26px,5vw,62px) 36px;transform-origin:top center;overflow:hidden}
+.letter-paper-top{display:flex;justify-content:space-between;align-items:center;gap:14px;border-bottom:1px solid #e9e4d9;padding-bottom:17px}
+.letter-paper-top .small-cap{color:#a66c53}
+.letter-paper-top button{border:0;background:transparent;color:#857966;font-size:11px;padding:5px 7px}
+.letter-paper-top button:hover{text-decoration:underline}
+.letter-paper h2{font-size:24px;line-height:1.4;margin:27px 0 19px;color:#29392f}
+.letter-paper .letter-prose p{font-family:Georgia,"Noto Serif CJK SC","Songti SC",serif;color:#3f4a42;font-size:13.5px;line-height:1.9;margin:0 0 18px}
+.letter-paper .letter-detail{padding:15px 0}
+.letter-paper .letter-note{margin-top:21px!important}
+.letter-paper.is-opening #letter-body{visibility:hidden}
+.letter-paper .inline-citation{display:inline;text-decoration:none;background:#eaf2e9;color:#28634f;border:0;border-bottom:1px solid #9fc2a8;border-radius:3px;padding:1px 4px;white-space:normal;overflow-wrap:anywhere;font:inherit}
+.letter-paper .inline-citation:hover{background:#d5e8d8;text-decoration:underline}
+@media(max-width:620px){.essay-section p,.essay-closing p,.letter-paper .letter-prose p{font-size:13px}.letter-section{padding:22px 17px 28px}.letter-heading{align-items:flex-start}.letter-heading>span:last-child{max-width:110px;text-align:right;line-height:1.5}.envelope-button{width:255px;height:151px}.envelope-seal{top:53px}.letter-paper{padding:24px 22px 29px}}
