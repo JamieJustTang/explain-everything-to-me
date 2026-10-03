@@ -86,13 +86,19 @@ class JournalTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'same|date'):
             journal.compose(data, digest)
 
-    def test_ready_to_share_requires_artifact(self):
+    def test_ready_to_share_can_note_no_artifact(self):
         data = journal.blank()
         data['entries'].append({'id': 'insight', 'date': '2026-10-03', 'artifact': '',
                                 'updated_at': journal.timestamp()})
         payload = {'date': '2026-10-03', 'title': 'An insight', 'lead': 'A thought.',
                    'sections': [{'heading': 'A thought', 'body': 'A thought.', 'entry_ids': ['insight']}],
-                   'letter': {'body': 'Wait for an artifact.', 'entry_ids': ['insight']}}
+                   'coverage_note': 'Accessible local sessions were reviewed.',
+                   'letter': {'body': 'Wait for a visible artifact.', 'entry_ids': ['insight']}}
+        result = journal.compose(data, payload)
+        self.assertEqual(result['coverage_note'], 'Accessible local sessions were reviewed.')
+        self.assertEqual(result['letter']['body'], 'Wait for a visible artifact.')
+        data['entries'].append({'id': 'output', 'date': '2026-10-03', 'artifact': 'A diagram',
+                                'updated_at': journal.timestamp()})
         with self.assertRaisesRegex(ValueError, 'artifact'):
             journal.compose(data, payload)
 

@@ -1,6 +1,6 @@
 # explain-everything-to-me
 
-当前版本：**0.8.7**
+当前版本：**0.9.0**
 
 **问一句：我的 Agents 最近做了什么？**
 
@@ -33,6 +33,7 @@
 | 解释变化 | 串起多个 session 的连续工作，区分旧背景、新进展、Agent 的说法、工具证据与当前已核实的状态；重要结论附 WorkRef。 |
 | 可自定义汇报 | 默认先给短版结论；可切换按工作区详读或待决事项模板，也可用自己的 Markdown 模板覆盖。 |
 | 可选甘特图组件 | 可点击查看和编辑任务、项目 DDL，建立多张分类图。每次显式调用后，根据已核对的会话证据同步匹配任务；手动修改的字段不会被自动覆盖。 |
+| 可选每日日志组件 | 显式调用时核对本地当天的跨 Agent 工作记录，保存小进展，写成带文中产物链接的日志，并附个性化 READY TO SHARE 建议信。当天多次调用会更新同一日志。 |
 | 理解“最近” | 同一会话内再次调用时，从上次**用户调用时间**算起；首次无参数调用默认查最近 **3 天**。时间含糊且影响答案时，请你选时间段。 |
 | 可选 RAG + Jev | sivtr 召回候选，[jev-rag-retrieval](https://github.com/JamieJustTang/jev-rag-retrieval) 用 Jev 分别重排 session 和内部段落，Agent 再读原文核对。推荐长会话、多工作区用户配置自己的 Jev API；不配置也能使用。 |
 | 调整表达 | 内置 [STE 中文魔改规则](references/ste-language-improvement.md)，并从已读会话中的用户原话学习通用或项目特定的表达习惯。 |
@@ -145,11 +146,13 @@ python3 components/gantt/gantt.py seed --input components/gantt/example.json
 
 仓库把功能分成核心 Skill（`SKILL.md`、`scripts/`、`references/`、`templates/`）和 `components/<组件 ID>/`。每个可选组件有自己的 `component.json`，安装器会发现并列出它们。以后新增组件无需改动核心安装布局。
 
-## 设计预览：日拱一卒每日日志
+## 可选组件：日拱一卒每日日志
 
-正在设计的 [每日日志 dashboard](components/daily-journal/DESIGN.md) 会把一天的 Agent 对话和手写记录整理成一篇有起因、进展、转折和余留问题的日志。文件名直接作为正文中的引用，点击即可打开对应产物；左栏月历以虚线圆标出空白日期，有记录的日子会长出一个 emoji。正文使用逐行显现效果。**READY TO SHARE** 放在日志下方：点击信封后，信纸展开，逐行显示一封根据产物成熟度写给你的私人建议信。动画由本地打包的 GSAP 驱动，也遵循系统的“减少动态效果”设置。它不会代你发布或联系他人。
+选装的 [每日日志 dashboard](components/daily-journal/DESIGN.md) 会把一天的 Agent 对话和手写记录整理成一篇有起因、进展、转折和余留问题的日志。文件名直接作为正文中的引用，点击即可打开对应产物；左栏月历以虚线圆标出空白日期，有记录的日子会长出一个 emoji。正文使用逐行显现效果。**READY TO SHARE** 放在日志下方：点击信封后，信纸展开，逐行显示一封根据产物成熟度写给你的私人建议信。动画由本地打包的 GSAP 驱动，也遵循系统的“减少动态效果”设置。它不会代你发布或联系他人。
 
-当前是**本地原型**：已有带 WorkRef 的条目导入、结构化日志与建议信写入、产物链接和按日回看；尚未接入 Skill 的自动调用，也没有每日定时扫描。安装器暂不将它列为可选组件。下方截图只使用虚构示例数据。
+安装时选择 `daily-journal` 才会启用。每次显式调用 Skill 解释工作时，Agent 会检索**本地今天 00:00 至调用时刻**可访问的 Agent 记录，阅读原文、核实产物，再更新当天的条目、日志正文和建议信。即使本次提问只涉及一个项目，日志仍整理来源许可范围内的全天活动；如果你限制了来源或要求不记录，则遵守限制。同一天反复调用会更新同一日志，手写修改和删除的自动条目受到保护。尚无可见产物时，建议信会说明还差什么，不会虚构“可分享成果”。没有已核实条目就不会编造日志。只打开页面不会扫描会话，也没有默认每日定时任务。[同步细则](references/daily-journal-sync.md) 下方截图只使用虚构示例数据。
+
+安装后运行 `python3 components/daily-journal/journal.py serve`，在本机打开 `http://127.0.0.1:8767/`。默认数据保存在 `~/.explain-everything-to-me/daily-journal/data.json`，不进入 Git 仓库；初次安装不会导入示例。
 
 ![使用虚构数据的每日日志原型](assets/screenshots/journal-prototype.png)
 
@@ -175,10 +178,12 @@ cd explain-everything-to-me
 python3 scripts/install.py --host codex
 ```
 
-当前可选组件：`gantt`（“奋斗在DDL的前列”）。交互终端会询问是否安装；非交互运行默认只装核心。由 Agent 安装时，先询问用户，再明确传参：
+当前可选组件：`gantt`（“奋斗在DDL的前列”）和 `daily-journal`（“日拱一卒每日日志”）。交互终端会逐个询问；非交互运行默认只装核心。由 Agent 安装时，先询问用户，再明确传参：
 
 ```bash
 python3 scripts/install.py --host codex --component gantt  # 安装甘特图
+python3 scripts/install.py --host codex --component daily-journal  # 安装每日日志
+python3 scripts/install.py --host codex --component gantt --component daily-journal  # 两个都安装
 python3 scripts/install.py --host codex --no-components    # 仅安装核心
 ```
 

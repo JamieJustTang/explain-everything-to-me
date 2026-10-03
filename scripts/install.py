@@ -149,7 +149,9 @@ def main() -> None:
     print("Optional report layout: edit ~/.explain-everything-to-me/templates/default.md or ask for brief, workspace, or decisions.")
     if "gantt" in components:
         print("Gantt board: run python3 <installed-skill>/components/gantt/gantt.py serve, then open http://127.0.0.1:8765/.")
-    else:
+    if "daily-journal" in components:
+        print("Daily journal: explicit Skill calls update today's journal; run python3 <installed-skill>/components/daily-journal/journal.py serve, then open http://127.0.0.1:8767/.")
+    if not components:
         print("Optional components were not installed. Available: " + ", ".join(catalog))
     print("Optional Jev reranking: install jev-rag-retrieval and configure your own TYPESAFE_API_KEY in a private environment file; never put the key in chat or this repository.")
 

@@ -1,0 +1,6 @@
+{
+  "id": "daily-journal",
+  "name": "日拱一卒每日日志",
+  "description": "把当天已核对的跨 Agent 工作记录写成可回看的日志，文中链接产物，并给出私人交流建议信。",
+  "entrypoint": "journal.py"
+}

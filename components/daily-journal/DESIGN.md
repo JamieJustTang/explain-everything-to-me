@@ -1,4 +1,4 @@
-# 日拱一卒：每日日志原型
+# 日拱一卒：可选每日日志组件
 
 ## 目的
 
@@ -14,11 +14,11 @@
 - 原始会话仍保存在 sivtr；日志仅保存简短结论、产物位置和 WorkRef。避免复制密钥或长篇会话。
 - 写摘要前先理解当天各工作线的目标与性质，再围绕起因、推进、转折、产物、局限写成连贯短文。正文不能只是把条目改写成清单；每节必须能追溯到当天条目。没有核对到的事实留白。
 - 产物需填 `artifact` 名称和 `artifact_target`：可用 HTTPS 链接或本机绝对路径。网页中的本机链接会通过仅监听 localhost 的预览端点打开；超过 25 MB 的文件不在网页预览。路径也可在文件管理器中打开。页面不扫描磁盘查找产物。
-- READY TO SHARE 必须引用至少一个产物，按用户的工作目标和产物成熟度写私人建议。推荐“可讨论”并不等于已经发表，也不等于用户已决定分享。
+- READY TO SHARE 必须引用至少一个当日条目；如果当天有产物，应在信中引用至少一个产物。如果暂时只有发现或进展，就如实说明还差什么可见对象。推荐“可讨论”并不等于已经发表，也不等于用户已决定分享。
 - 日志正文和建议信引用产物时，在句中写 `[[artifact:<条目 ID>]]`。页面将标记替换为带文件名的可点击链接；同节 `entry_ids` 仍保留可追溯关系。新写入的摘要若把有产物的条目列进 `entry_ids`，却不在正文里引用它，会被拒绝。旧摘要没有句中标记时，会在段末补一条内联“参见”链接。
 - 正文与 KEEP THIS 使用相同的较小字号。正文进入视野后，用本地打包的 GSAP 逐行显现；用户点击信封时，GSAP 依次打开封口、展开信纸、显现文字。信纸可重播。系统启用“减少动态效果”时，正文直接显示，信纸点击后立即打开。若 GSAP 未加载，内容仍可阅读。
 
-## 当前原型
+## 使用页面
 
 ![使用虚构数据的日拱一卒 dashboard](../../assets/screenshots/journal-prototype.png)
 
@@ -36,7 +36,7 @@ python3 components/daily-journal/journal.py --data /tmp/journal-demo.json seed -
 python3 components/daily-journal/journal.py --data /tmp/journal-demo.json serve --port 8767
 ```
 
-Agent 的条目导入和叙事摘要写入接口已实现，但**还没有接入 `explain-everything-to-me` 的调用钩子，也没有每日定时任务**。目前不会自动扫描所有 Agent 会话。未来接入时，应在用户显式调用本 Skill 并要求记日志，或用户另设每日自动任务时，先按当日时间窗检索多宿主记录、阅读原文，核对产物，再写入条目和摘要。不能因为页面打开就扫描会话。
+安装时选 `daily-journal` 后，Agent 按[同步规则](../../references/daily-journal-sync.md)在每次显式工作解释调用中核对当天可访问的多宿主记录、阅读原文、核实产物，再更新日志。页面打开不会扫描会话；没有默认每日定时任务。
 
 ## 导入格式
 
@@ -73,7 +73,7 @@ python3 components/daily-journal/journal.py import --input /path/to/events.json
 python3 components/daily-journal/journal.py compose --input /path/to/digest.json
 ```
 
-`digest.json` 的每个 `entry_ids` 必须指向同一天的已有条目。正文分节引用条目；有产物的条目还必须用 `[[artifact:<条目 ID>]]` 在对应句中引用文件。建议信至少引用一个产物，并把它写进信的正文。若来源条目后来被编辑或删除，页面提示重新撰写。
+`digest.json` 的每个 `entry_ids` 必须指向同一天的已有条目。正文分节引用条目；有产物的条目还必须用 `[[artifact:<条目 ID>]]` 在对应句中引用文件。建议信至少引用一个当天条目；当天有产物时，还须引用一个产物并把它写进信的正文。`coverage_note` 可简述已查来源及缺口。若来源条目后来被编辑或删除，页面提示重新撰写。
 
 ```json
 {
@@ -87,10 +87,3 @@ python3 components/daily-journal/journal.py compose --input /path/to/digest.json
 ```
 
 仓库中的 `example.json` 和 `example-artifacts/` 全是虚构示例，用于预览页面，不代表用户的真实日志。
-
-## 待接入 Skill 时
-
-1. 把此目录补上 `component.json`，再由安装器作为可选组件列出；用户选中后才安装。
-2. 在 `SKILL.md` 增加一条有条件的调用路由，指向独立参考文件。明确按本地日期检索和核对、去重、失败回报。
-3. 增加首次采集边界、跨会话去重和用户允许自动记录的设置。把手写日记与 Agent 摘录分开标注。
-4. 如果用户要每日自动运行，用宿主的定时任务能力单独创建；当前原型不隐式启动后台扫描。

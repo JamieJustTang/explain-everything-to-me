@@ -137,6 +137,7 @@ function render(){
   $('#coverage-text').textContent=digest?.lead||(items.length?'已有条目，但还没有经过原文核对的叙事摘要。':'写下一件小事，轨迹就从这里开始。');
   const stale=digest&&Object.entries(digest.entry_versions||{}).some(([id,version])=>byId.get(id)?.updated_at!==version);
   $('#digest-status').textContent=digest?(stale?'素材有变化 · 建议重写':'已整理成文'):'待撰写';
+  $('#source-note').textContent=digest?.coverage_note||'从会话证据与手写记录整理';
   $('#digest-body').innerHTML=digest?`${(digest.sections||[]).map((section,index)=>`<section class="essay-section"><span class="section-number">${String(index+1).padStart(2,'0')}</span><h2>${esc(section.heading)}</h2>${paragraphs(section.body,byId,section.entry_ids)}</section>`).join('')}<div class="essay-closing"><span class="small-cap">KEEP THIS</span>${paragraphs(digest.closing,byId)}</div>`:'<div class="empty-essay"><h2>这一天，还没有写成文章。</h2><p>条目只是材料。让 Agent 阅读当天会话、核对产物，再写出起因、转折、留下了什么和下一步。</p></div>';
   const letter=digest?.letter;
   $('#letter-body').innerHTML=letter?`<h2>${esc(letter.salutation||'写给你的交流建议')}</h2><div class="letter-prose">${paragraphs(letter.body,byId,letter.entry_ids)}</div>${letter.recipient?`<div class="letter-detail"><span>适合找谁</span><strong>${esc(letter.recipient)}</strong></div>`:''}${letter.suggested_ask?`<div class="letter-detail"><span>可以问什么</span><strong>${esc(letter.suggested_ask)}</strong></div>`:''}<p class="letter-note">这里只给建议；不会自动发布或联系他人。</p>`:'<h2>先看清手里的东西</h2><p>当今日日志写好后，这里会给你一封具体的建议信：哪些成果值得展示，适合找谁，以及最好问什么。不会自动发送。</p>';

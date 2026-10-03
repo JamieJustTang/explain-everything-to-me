@@ -209,14 +209,17 @@ def compose(data, payload):
     if not isinstance(letter, dict):
         raise ValueError("Ready to Share needs a recommendation letter")
     letter_refs = entry_ids(letter.get("entry_ids", []))
-    if not any(todays[ref].get("artifact") for ref in letter_refs):
-        raise ValueError("Ready to Share must cite at least one artifact")
+    if not letter_refs:
+        raise ValueError("Ready to Share must cite at least one journal entry")
+    if any(entry.get("artifact") for entry in todays.values()) and not any(todays[ref].get("artifact") for ref in letter_refs):
+        raise ValueError("Ready to Share must cite an artifact when one exists")
     letter_body = clean(letter.get("body", ""), 3000)
     require_inline_artifacts(letter_body, letter_refs)
     referenced.update(letter_refs)
     result = {"date": report_date, "title": clean(payload.get("title", ""), 180),
               "lead": clean(payload.get("lead", ""), 1500), "sections": rendered,
               "closing": clean(payload.get("closing", ""), 1500),
+              "coverage_note": clean(payload.get("coverage_note", ""), 700),
               "letter": {"salutation": clean(letter.get("salutation", ""), 120),
                          "body": letter_body,
                          "recipient": clean(letter.get("recipient", ""), 240),
