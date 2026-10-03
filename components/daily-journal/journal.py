@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Local daily journal prototype with a verified-event import interface."""
+"""Local daily journal prototype with event and narrative import interfaces."""
 from __future__ import annotations
 
 import argparse
 import contextlib
 import fcntl
 import json
+import mimetypes
 import os
 import tempfile
 import uuid
@@ -21,7 +22,7 @@ READINESS = {"private", "discussable", "shared"}
 
 
 def timestamp():
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
 def clean(value, limit=1000):
@@ -40,7 +41,7 @@ def day(value):
 
 
 def blank():
-    return {"version": 1, "entries": [], "updated_at": timestamp(), "last_import_at": None}
+    return {"version": 1, "entries": [], "digests": {}, "updated_at": timestamp(), "last_import_at": None}
 
 
 def read(path):
@@ -97,10 +98,15 @@ def fields(payload, *, agent=False):
         raise ValueError("Agent entries require WorkRef evidence")
     if agent and readiness == "shared":
         raise ValueError("Only the user can mark an entry shared")
+    artifact_target = clean(payload.get("artifact_target", ""), 1200)
+    if artifact_target and not (artifact_target.startswith("/") or artifact_target.startswith("demo:") or
+                                artifact_target.startswith("https://") or artifact_target.startswith("http://")):
+        raise ValueError("Artifact target must be an HTTP URL or absolute path")
     return {"date": day(payload.get("date", "")), "kind": kind, "title": title,
             "detail": clean(payload.get("detail", ""), 3000),
             "project": clean(payload.get("project", ""), 140),
             "artifact": clean(payload.get("artifact", ""), 700),
+            "artifact_target": artifact_target,
             "readiness": readiness, "workrefs": list(dict.fromkeys(refs))}
 
 
@@ -143,11 +149,19 @@ def import_events(data, payload):
         existing = next((entry for entry in data["entries"] if entry.get("key") == key), None)
         if existing:
             previous_refs = existing.get("workrefs", [])
+            changed = False
             for field, value in item.items():
-                if field not in existing.get("manual_fields", []):
+                if field == "workrefs":
+                    continue
+                if field not in existing.get("manual_fields", []) and existing.get(field) != value:
                     existing[field] = value
-            existing["workrefs"] = list(dict.fromkeys(previous_refs + item["workrefs"]))[-12:]
-            existing["updated_at"] = timestamp()
+                    changed = True
+            merged_refs = list(dict.fromkeys(previous_refs + item["workrefs"]))[-12:]
+            if merged_refs != previous_refs:
+                existing["workrefs"] = merged_refs
+                changed = True
+            if changed:
+                existing["updated_at"] = timestamp()
             result["updated"] += 1
         else:
             data["entries"].append({"id": uuid.uuid4().hex[:12], "source": "agent", "key": key,
@@ -155,6 +169,70 @@ def import_events(data, payload):
             result["created"] += 1
     data["last_import_at"] = timestamp()
     return result
+
+
+
+def compose(data, payload):
+    report_date = day(payload.get("date", ""))
+    todays = {entry["id"]: entry for entry in data["entries"] if entry["date"] == report_date}
+    sections = payload.get("sections", [])
+    if not isinstance(sections, list) or not 1 <= len(sections) <= 8:
+        raise ValueError("Digest needs 1–8 narrative sections")
+
+    def entry_ids(value):
+        if not isinstance(value, list) or len(value) > 12 or any(ref not in todays for ref in value):
+            raise ValueError("Digest references must point to entries from this date")
+        return list(dict.fromkeys(value))
+
+    rendered = []
+    referenced = set()
+    for section in sections:
+        if not isinstance(section, dict):
+            raise ValueError("Invalid digest section")
+        refs = entry_ids(section.get("entry_ids", []))
+        if not refs:
+            raise ValueError("Each section needs at least one journal entry")
+        referenced.update(refs)
+        rendered.append({"heading": clean(section.get("heading", ""), 140),
+                         "body": clean(section.get("body", ""), 4000), "entry_ids": refs})
+        if not rendered[-1]["heading"] or not rendered[-1]["body"]:
+            raise ValueError("Digest heading and body are required")
+    letter = payload.get("letter")
+    if not isinstance(letter, dict):
+        raise ValueError("Ready to Share needs a recommendation letter")
+    letter_refs = entry_ids(letter.get("entry_ids", []))
+    if not any(todays[ref].get("artifact") for ref in letter_refs):
+        raise ValueError("Ready to Share must cite at least one artifact")
+    referenced.update(letter_refs)
+    result = {"date": report_date, "title": clean(payload.get("title", ""), 180),
+              "lead": clean(payload.get("lead", ""), 1500), "sections": rendered,
+              "closing": clean(payload.get("closing", ""), 1500),
+              "letter": {"salutation": clean(letter.get("salutation", ""), 120),
+                         "body": clean(letter.get("body", ""), 3000),
+                         "recipient": clean(letter.get("recipient", ""), 240),
+                         "suggested_ask": clean(letter.get("suggested_ask", ""), 700),
+                         "entry_ids": letter_refs},
+              "entry_versions": {ref: todays[ref]["updated_at"] for ref in referenced},
+              "generated_at": timestamp()}
+    if not result["title"] or not result["lead"] or not result["letter"]["body"]:
+        raise ValueError("Digest title, lead, and recommendation letter are required")
+    data.setdefault("digests", {})[report_date] = result
+    return result
+
+
+def artifact_file(entry):
+    target = entry.get("artifact_target", "")
+    if target.startswith("demo:"):
+        name = target[5:]
+        if not name or Path(name).name != name:
+            return None
+        path = (HERE / "example-artifacts" / name).resolve()
+        if not path.is_relative_to((HERE / "example-artifacts").resolve()):
+            return None
+        return path
+    if target.startswith("/"):
+        return Path(target).resolve()
+    return None
 
 
 def handler_for(path):
@@ -178,6 +256,25 @@ def handler_for(path):
             if route == "/api/data":
                 with locked(path):
                     return self.respond(200, read(path))
+            if route.startswith("/api/artifact/"):
+                entry_id = route.removeprefix("/api/artifact/")
+                with locked(path):
+                    entry = next((item for item in read(path)["entries"] if item["id"] == entry_id), None)
+                artifact = artifact_file(entry) if entry else None
+                if not artifact or not artifact.is_file() or artifact.stat().st_size > 25_000_000:
+                    return self.respond(404, {"error": "Artifact not available"})
+                kind = mimetypes.guess_type(artifact.name)[0] or "application/octet-stream"
+                if kind not in {"application/pdf", "image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml", "text/plain"}:
+                    kind = "text/plain" if artifact.suffix.lower() in {".md", ".csv", ".json", ".py", ".js", ".html", ".css"} else "application/octet-stream"
+                raw = artifact.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", kind + ("; charset=utf-8" if kind == "text/plain" else ""))
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Content-Security-Policy", "default-src 'none'; sandbox")
+                self.send_header("Content-Disposition", ("inline" if kind != "application/octet-stream" else "attachment") + f'; filename="{artifact.name.encode("ascii", "ignore").decode() or "artifact"}"')
+                self.send_header("Content-Length", str(len(raw)))
+                self.end_headers()
+                return self.wfile.write(raw)
             file = {"/": "index.html", "/app.js": "app.js", "/styles.css": "styles.css"}.get(route)
             if not file:
                 return self.respond(404, {"error": "Not found"})
@@ -217,6 +314,8 @@ def main():
     sub.add_parser("show")
     ingest = sub.add_parser("import")
     ingest.add_argument("--input", required=True)
+    digest = sub.add_parser("compose")
+    digest.add_argument("--input", required=True)
     seed = sub.add_parser("seed")
     seed.add_argument("--input", required=True)
     args = parser.parse_args()
@@ -240,11 +339,11 @@ def main():
             if data["entries"]:
                 raise SystemExit("Journal is not empty; sample was not imported")
             write(path, sample)
-    else:
+    elif args.command in {"import", "compose"}:
         raw = os.sys.stdin.read() if args.input == "-" else Path(args.input).read_text(encoding="utf-8")
         with locked(path):
             data = read(path)
-            result = import_events(data, json.loads(raw))
+            result = import_events(data, json.loads(raw)) if args.command == "import" else compose(data, json.loads(raw))
             write(path, data)
         print(json.dumps(result, ensure_ascii=False))
 

@@ -29,6 +29,9 @@ class JournalTest(unittest.TestCase):
         self.assertEqual(item['title'], 'My own title')
         self.assertEqual(item['detail'], 'New verified fact.')
         self.assertEqual(item['workrefs'], ['codex/example/1','codex/example/2'])
+        event['workrefs'] = ['codex/example/1']
+        journal.import_events(data, {'events':[event]})
+        self.assertEqual(item['workrefs'], ['codex/example/1','codex/example/2'])
 
     def test_agent_requires_evidence_and_cannot_claim_shared(self):
         data = journal.blank()
@@ -56,6 +59,42 @@ class JournalTest(unittest.TestCase):
             journal.write(path, journal.blank())
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
             self.assertEqual(journal.read(path)['version'], 1)
+
+    def test_narrative_links_to_same_day_artifacts(self):
+        data = journal.blank()
+        journal.import_events(data, {'events': [self.event()]})
+        item = data['entries'][0]
+        initial_version = item['updated_at']
+        journal.import_events(data, {'events': [self.event()]})
+        self.assertEqual(item['updated_at'], initial_version)
+        digest = {'date': '2026-10-03', 'title': 'A day with a visible result',
+                  'lead': 'The diagram made the question discussable.',
+                  'sections': [{'heading': 'A first structure', 'body': 'The diagram connects the main ideas.',
+                                'entry_ids': [item['id']]}],
+                  'closing': 'Check one boundary next.',
+                  'letter': {'salutation': 'Dear researcher', 'body': 'Show the diagram to a colleague.',
+                             'recipient': 'A colleague', 'suggested_ask': 'What is missing?',
+                             'entry_ids': [item['id']]}}
+        result = journal.compose(data, digest)
+        self.assertEqual(result['entry_versions'][item['id']], item['updated_at'])
+        self.assertEqual(data['digests']['2026-10-03']['letter']['entry_ids'], [item['id']])
+        digest['sections'][0]['entry_ids'] = ['not-an-entry']
+        with self.assertRaisesRegex(ValueError, 'same|date'):
+            journal.compose(data, digest)
+
+    def test_ready_to_share_requires_artifact(self):
+        data = journal.blank()
+        data['entries'].append({'id': 'insight', 'date': '2026-10-03', 'artifact': '',
+                                'updated_at': journal.timestamp()})
+        payload = {'date': '2026-10-03', 'title': 'An insight', 'lead': 'A thought.',
+                   'sections': [{'heading': 'A thought', 'body': 'A thought.', 'entry_ids': ['insight']}],
+                   'letter': {'body': 'Wait for an artifact.', 'entry_ids': ['insight']}}
+        with self.assertRaisesRegex(ValueError, 'artifact'):
+            journal.compose(data, payload)
+
+    def test_example_artifact_resolution(self):
+        self.assertEqual(journal.artifact_file({'artifact_target': 'demo:hypotheses.md'}).name, 'hypotheses.md')
+        self.assertIsNone(journal.artifact_file({'artifact_target': 'demo:../journal.py'}))
 
 
 if __name__ == '__main__':

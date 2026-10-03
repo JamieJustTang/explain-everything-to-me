@@ -1,6 +1,6 @@
 # explain-everything-to-me
 
-当前版本：**0.8.3**
+当前版本：**0.8.4**
 
 **问一句：我的 Agents 最近做了什么？**
 
@@ -147,7 +147,9 @@ python3 components/gantt/gantt.py seed --input components/gantt/example.json
 
 ## 设计预览：日拱一卒每日日志
 
-正在设计的 [每日日志 dashboard](https://github.com/JamieJustTang/explain-everything-to-me/blob/main/components/daily-journal/DESIGN.md) 把一天的工作记录整理为「推进、留下、发现、可交流」。页面可按日期回看、手动编辑，也提供带 WorkRef 的 Agent 导入接口。当前是**本地原型**：尚未接入 Skill 的自动调用，也没有每日定时扫描；安装器不会将它列为可选组件。
+正在设计的 [每日日志 dashboard](components/daily-journal/DESIGN.md) 会把一天的 Agent 对话和手写记录整理成一篇有起因、进展、转折和余留问题的日志。相关段落直接链接当天的文件或网页产物，点击即可查看；原始条目折叠在正文下，供回溯证据。**READY TO SHARE** 则是一封根据产物成熟度写给你的私人建议信：推荐展示什么、找谁交流、问什么具体问题。它不会代你发布或联系他人。
+
+当前是**本地原型**：已有带 WorkRef 的条目导入、结构化日志与建议信写入、产物链接和按日回看；尚未接入 Skill 的自动调用，也没有每日定时扫描。安装器暂不将它列为可选组件。下方截图只使用虚构示例数据。
 
 ![使用虚构数据的每日日志原型](assets/screenshots/journal-prototype.png)
 

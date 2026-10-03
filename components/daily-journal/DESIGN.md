@@ -2,7 +2,7 @@
 
 ## 目的
 
-把一天的 Agent 对话和用户手写记录，整理成能继续加工的轨迹。首页按日期展示四件事：推进了什么、留下了什么对象、发现了什么、哪些对象已可交流。项目名称只用于归类；“可交流”是用户判断的状态，不触发发布、通知或联系他人。
+把一天的 Agent 对话和用户手写记录，整理成一篇可回看的日志。首页先讲今天在做什么、出现了什么转折、留下哪些对象、还有什么未完成；在相应段落旁直接链接产物。原始条目折叠在正文之后，供核对。右侧的 **READY TO SHARE** 是基于今日产物写给用户的个性化建议信，说明适合展示什么、找谁交流、可以问什么；它不触发发布、通知或联系他人。
 
 ## 设计规则
 
@@ -12,6 +12,9 @@
 - Agent 最多建议“可找人讨论”，不能标记“已经交流”。展示给谁、展示什么、何时发送，由用户决定。
 - 日期按用户本地时区归属。跨午夜的会话按每项进展实际发生的时间归日，不能把整段长会话都算到最后一天。
 - 原始会话仍保存在 sivtr；日志仅保存简短结论、产物位置和 WorkRef。避免复制密钥或长篇会话。
+- 写摘要前先理解当天各工作线的目标与性质，再围绕起因、推进、转折、产物、局限写成连贯短文。正文不能只是把条目改写成清单；每节必须能追溯到当天条目。没有核对到的事实留白。
+- 产物需填 `artifact` 名称和 `artifact_target`：可用 HTTPS 链接或本机绝对路径。网页中的本机链接会通过仅监听 localhost 的预览端点打开；超过 25 MB 的文件不在网页预览。路径也可在文件管理器中打开。页面不扫描磁盘查找产物。
+- READY TO SHARE 必须引用至少一个产物，按用户的工作目标和产物成熟度写私人建议。推荐“可讨论”并不等于已经发表，也不等于用户已决定分享。
 
 ## 当前原型
 
@@ -29,7 +32,7 @@ python3 components/daily-journal/journal.py --data /tmp/journal-demo.json seed -
 python3 components/daily-journal/journal.py --data /tmp/journal-demo.json serve --port 8767
 ```
 
-Agent 的导入接口已实现，但**还没有接入 `explain-everything-to-me` 的调用钩子，也没有每日定时任务**。目前不会自动扫描所有 Agent 会话。未来接入时，应在用户显式调用本 Skill 并要求记日志，或用户另设每日自动任务时，先按当日时间窗检索多宿主记录、阅读原文，再把本次核对的变化交给导入接口。不能因为页面打开就扫描会话。
+Agent 的条目导入和叙事摘要写入接口已实现，但**还没有接入 `explain-everything-to-me` 的调用钩子，也没有每日定时任务**。目前不会自动扫描所有 Agent 会话。未来接入时，应在用户显式调用本 Skill 并要求记日志，或用户另设每日自动任务时，先按当日时间窗检索多宿主记录、阅读原文，核对产物，再写入条目和摘要。不能因为页面打开就扫描会话。
 
 ## 导入格式
 
@@ -49,6 +52,7 @@ python3 components/daily-journal/journal.py import --input /path/to/events.json
     "detail": "图上已经能说明三个变量的关系；仍需核对边界条件。",
     "project": "示例项目",
     "artifact": "figure-draft.svg",
+    "artifact_target": "/absolute/path/to/figure-draft.svg",
     "readiness": "discussable",
     "workrefs": ["codex/example/1"]
   }]
@@ -56,6 +60,29 @@ python3 components/daily-journal/journal.py import --input /path/to/events.json
 ```
 
 `kind` 可取 `progress | artifact | insight | share`；`readiness` 可取 `private | discussable`。`shared` 仅由用户在页面标记。`key` 应由本地日期、真实工作区和事项构成，不含随机时间戳。导入重复键时更新 Agent 字段，并保留用户修改。数据文件权限为 `0600`。
+
+## 撰写今日日志与建议信
+
+条目导入后，Agent 需阅读会话原文、打开产物，写一份结构化摘要，再执行：
+
+```bash
+python3 components/daily-journal/journal.py compose --input /path/to/digest.json
+```
+
+`digest.json` 的每个 `entry_ids` 必须指向同一天的已有条目。正文分节引用条目；建议信至少引用一个有产物名称的条目。页面会把这些条目关联的文件放在相应段落和信末。若来源条目后来被编辑或删除，页面提示重新撰写。
+
+```json
+{
+  "date": "2026-10-03",
+  "title": "从问题走到第一张可讨论的图",
+  "lead": "今天把一个想法写成可检查的假设，并留下图稿。",
+  "sections": [{"heading": "先把问题变得可检查", "body": "先列出两种解释，再明确反例方向。", "entry_ids": ["sample-01"]}],
+  "closing": "下一步核对边界条件。",
+  "letter": {"salutation": "写给今天的你", "body": "建议带着图稿找合作者讨论。", "recipient": "熟悉问题的合作者", "suggested_ask": "哪条关系最缺证据？", "entry_ids": ["sample-02"]}
+}
+```
+
+仓库中的 `example.json` 和 `example-artifacts/` 全是虚构示例，用于预览页面，不代表用户的真实日志。
 
 ## 待接入 Skill 时
 
