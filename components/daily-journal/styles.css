@@ -101,3 +101,16 @@
 .letter-paper .inline-citation{display:inline;text-decoration:none;background:#eaf2e9;color:#28634f;border:0;border-bottom:1px solid #9fc2a8;border-radius:3px;padding:1px 4px;white-space:normal;overflow-wrap:anywhere;font:inherit}
 .letter-paper .inline-citation:hover{background:#d5e8d8;text-decoration:underline}
 @media(max-width:620px){.essay-section p,.essay-closing p,.letter-paper .letter-prose p{font-size:13px}.letter-section{padding:22px 17px 28px}.letter-heading{align-items:flex-start}.letter-heading>span:last-child{max-width:110px;text-align:right;line-height:1.5}.envelope-button{width:255px;height:151px}.envelope-seal{top:53px}.letter-paper{padding:24px 22px 29px}}
+
+/* Date and calendar navigation use the same drawn icon at every font scale. */
+.chevron-icon{display:block;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.day-navigation{display:grid!important;grid-template-columns:42px minmax(0,max-content) 42px;align-items:center;gap:15px;min-width:0}
+.day-heading{min-width:0}
+.datebar .day-nav-button{display:grid;place-items:center;width:42px;height:42px;min-height:42px;padding:0;border:1px solid #dce5dd;border-radius:11px;background:#fff;color:var(--green);box-shadow:0 1px 2px #294e3810;transition:background .18s,border-color .18s,box-shadow .18s,transform .18s}
+.datebar .day-nav-button:hover{background:#edf4ed;border-color:#b8d0be;box-shadow:0 3px 10px #294e3817;transform:translateY(-1px)}
+.datebar .day-nav-button:active{transform:translateY(0);box-shadow:none}
+.calendar-head .calendar-nav-button{display:grid;place-items:center;width:32px;height:32px;padding:0;border:1px solid transparent;border-radius:9px;color:var(--green);transition:background .18s,border-color .18s}
+.calendar-head .calendar-nav-button .chevron-icon{width:17px;height:17px}
+.calendar-head .calendar-nav-button:hover{background:#e2ede1;border-color:#cadbcb}
+@media(max-width:620px){.datebar{flex-wrap:wrap;row-gap:12px}.day-navigation{grid-template-columns:38px minmax(0,max-content) 38px;gap:8px}.datebar .day-nav-button{width:38px;height:38px;min-height:38px}.datebar .day-nav-button .chevron-icon{width:17px;height:17px}}
+@media(prefers-reduced-motion:reduce){.datebar .day-nav-button,.calendar-head .calendar-nav-button{transition:none}}
