@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="data:,">
+<title>日拱一卒 · 每日日志</title><link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="identity"><span class="mark">日</span><div><strong>日拱一卒</strong><small>EXPLAIN EVERYTHING TO ME</small></div></div>
+    <div class="side-label">个人日志 / DAILY LOG</div>
+    <nav aria-label="日期"><button id="today-nav" class="nav active">今日记录 <span>↗</span></button><button id="archive-nav" class="nav">过往积累 <span>⌕</span></button></nav>
+    <div class="side-note"><span class="small-cap">LOG PRINCIPLE</span><p>每天留下一个可积累对象。<br>每周留下一个可展示对象。</p></div>
+    <div class="side-bottom"><span class="status-dot"></span> 本机保存 · 由你决定何时展示</div>
+  </aside>
+  <main>
+    <header class="top"><div><span class="eyebrow">A DAILY PRACTICE OF MAKING</span><h1>把今天，留下来。</h1><p>把会话里的推进变成能回看、能继续、能交流的作品轨迹。</p></div><div class="top-actions"><span class="privacy">◌ 私人空间</span><button id="add-entry" class="primary">＋ 记下一步</button></div></header>
+    <section id="archive-panel" class="archive-panel" hidden><div class="section-head"><div><span class="small-cap">THE LONG ARC</span><h2>过往积累</h2></div><span>点击日期，回看留下的对象</span></div><div id="archive-days"></div></section>
+    <section class="datebar"><div><button id="prev-day" aria-label="前一天">←</button><div><span class="small-cap">THE DAY IN PROGRESS</span><h2 id="date-title"></h2></div><button id="next-day" aria-label="后一天">→</button></div><button id="back-today">回到今天</button></section>
+    <section class="headline" aria-label="当日概况"><div><span class="small-cap">TODAY'S TRACE</span><strong id="headline-text">今天还没有记录。</strong><p id="coverage-text">写下一件小事，轨迹就从这里开始。</p></div><div class="day-count"><b id="count">0</b><span>个可积累对象</span></div></section>
+    <section class="metrics"><article><span>推进</span><strong id="count-progress">0</strong><small>让工作往前一步</small></article><article><span>留下</span><strong id="count-artifact">0</strong><small>能继续加工的对象</small></article><article><span>发现</span><strong id="count-insight">0</strong><small>值得记住的判断</small></article><article class="accent"><span>可交流</span><strong id="count-discussable">0</strong><small>别人已能看懂核心</small></article></section>
+    <div class="layout"><div class="feed"><div class="section-head"><div><span class="small-cap">THE SMALL WINS</span><h2>今天留下了什么</h2></div><span id="source-note">从会话证据与手写记录整理</span></div><div id="entry-list"></div></div>
+    <aside class="reflection"><div class="reflection-card"><span class="small-cap">READY TO SHARE</span><h2>到线就交流</h2><p>合格线：别人能看懂问题、你做了什么、还想请教什么。标记“可讨论”只是在这里提醒自己；不会自动发布或联系他人。</p><div id="share-list"></div></div><div class="reflection-card quiet"><span class="small-cap">YOUR WORKING LANGUAGE</span><h2>风格，慢慢长出来</h2><p>持续积累你常用的提问方式、图、模型与解释方法。这里展示已经留下的对象，不把“想法”冒充成果。</p><div id="artifact-list"></div></div></aside></div>
+    <footer>今天没有记录，也可以如实留白。日记只保存在本机；Agent 写入必须附可核对的会话证据。</footer>
+  </main>
+</div>
+<dialog id="editor"><form id="entry-form"><div class="dialog-head"><div><span class="small-cap">A SMALL STEP</span><h2 id="dialog-title">记下一步</h2></div><button type="button" id="close-dialog" aria-label="关闭">×</button></div><div class="form-grid"><label>日期<input name="date" type="date" required></label><label>类别<select name="kind"><option value="progress">推进</option><option value="artifact">可积累对象</option><option value="insight">发现</option><option value="share">交流准备</option></select></label><label class="wide">一句话标题<input name="title" maxlength="140" required placeholder="我今天留下了什么？"></label><label class="wide">具体变化<textarea name="detail" maxlength="3000" placeholder="做了什么？为何有用？"></textarea></label><label>项目 / 工作线<input name="project" maxlength="140" placeholder="可留空"></label><label>成果位置<input name="artifact" maxlength="700" placeholder="文件、链接或作品名"></label><label class="wide">交流状态<select name="readiness"><option value="private">还在加工</option><option value="discussable">可找人讨论</option><option value="shared">已经交流</option></select></label></div><div class="dialog-actions"><button type="button" id="delete-entry" class="delete">删除</button><span></span><button type="button" id="cancel-entry">取消</button><button type="submit" class="primary">保存这一步</button></div></form></dialog>
+<div id="toast" role="status" aria-live="polite"></div><script src="/app.js"></script>
+</body></html>

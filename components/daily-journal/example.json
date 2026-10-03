@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "updated_at": "2026-10-03T00:00:00+00:00",
+  "last_import_at": null,
+  "entries": [
+    {"id":"sample-01","date":"2026-10-03","kind":"progress","title":"把问题从想法写成可检查的假设","detail":"列出了两种解释，并写下下一步要找的反例。","project":"示例研究","artifact":"假设清单 v1","readiness":"private","workrefs":[],"source":"manual","key":null,"manual_fields":[],"updated_at":"2026-10-03T00:00:00+00:00"},
+    {"id":"sample-02","date":"2026-10-03","kind":"artifact","title":"留下第一张机制图","detail":"别人可以从图上看懂主要变量和关系，细节还要继续核对。","project":"示例研究","artifact":"机制图草稿","readiness":"discussable","workrefs":[],"source":"manual","key":null,"manual_fields":[],"updated_at":"2026-10-03T00:00:00+00:00"},
+    {"id":"sample-03","date":"2026-10-03","kind":"insight","title":"发现一个需要核对的边界条件","detail":"当前解释可能只对样例任务成立，不能先当成普遍结论。","project":"示例研究","artifact":"","readiness":"private","workrefs":[],"source":"manual","key":null,"manual_fields":[],"updated_at":"2026-10-03T00:00:00+00:00"}
+  ]
+}

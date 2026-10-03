@@ -7,7 +7,7 @@
 /* Light theme keeps the existing layout and uses warm white with restrained red accents. */
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg:#faf9f6;--rail:#fffefa;--panel:#fff;--panel2:#f7f6f2;
+  --bg:#fff;--rail:#fff;--panel:#fff;--panel2:#fff;
   --line:#e7e4df;--text:#302f2c;--muted:#736f69;
   --accent:#a64043;--mint:#819c90;--gold:#956b46;
   --red:#b37b62;--blue:#7e93a3;
@@ -18,7 +18,7 @@
 [data-theme="light"] .icon-btn:hover,
 [data-theme="light"] .ghost:hover{background:#f4f1ed;border-color:#c9bdb7}
 [data-theme="light"] #chart-list button:hover{background:#f4f2ee}
-[data-theme="light"] #chart-list button.selected{background:#f2eee9;color:#904044}
+[data-theme="light"] #chart-list button.selected{background:#fff;color:#904044;box-shadow:inset 3px 0 #a64043}
 [data-theme="light"] .pulse{box-shadow:0 0 0 4px #819c9024}
 [data-theme="light"] .primary{color:#fff}
 [data-theme="light"] .primary:hover{background:#89363a}
@@ -29,9 +29,9 @@
 [data-theme="light"] .timeline-row{border-bottom-color:#eae7e1}
 [data-theme="light"] .timeline-row:hover{background:#f7f5f1}
 [data-theme="light"] .timeline-row.head,
-[data-theme="light"] .head .timeline-label{background:#f5f3ef}
+[data-theme="light"] .head .timeline-label{background:#fff}
 [data-theme="light"] .timeline-row.project,
-[data-theme="light"] .project .timeline-label{background:#faf9f6}
+[data-theme="light"] .project .timeline-label{background:#fff}
 [data-theme="light"] .timeline-track{background-image:repeating-linear-gradient(to right,transparent 0,transparent calc(var(--day) - 1px),#e9e6e0 calc(var(--day) - 1px),#e9e6e0 var(--day))}
 [data-theme="light"] .timeline-track .weekend{background:#7d756009}
 [data-theme="light"] .timeline-track .today-line{background:#a64043a8}
@@ -43,9 +43,9 @@
 [data-theme="light"] .bar.blocked{background:#ac845b}
 [data-theme="light"] .milestone{box-shadow:0 0 0 4px #9c5b3324}
 [data-theme="light"] .milestone:hover{box-shadow:0 0 0 7px #9c5b333a}
-[data-theme="light"] .backlog-item{background:#faf9f6;border-color:#e7e4df}
+[data-theme="light"] .backlog-item{background:#fff;border-color:#e7e4df}
 [data-theme="light"] .backlog-item:hover{background:#f3f1eb}
-[data-theme="light"] .agent-card{background:linear-gradient(145deg,#fcfaf4,#f7f5ee 80%);border-color:#e5e1d7}
+[data-theme="light"] .agent-card{background:#fff;border-color:#e5e1d7}
 [data-theme="light"] .agent-card p{color:#625355}
 [data-theme="light"] .agent-foot{border-top-color:#e3ded2}
 [data-theme="light"] .agent-card small{color:#78696a}

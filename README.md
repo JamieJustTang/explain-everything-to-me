@@ -1,6 +1,6 @@
 # explain-everything-to-me
 
-当前版本：**0.8.2**
+当前版本：**0.8.3**
 
 **问一句：我的 Agents 最近做了什么？**
 
@@ -123,13 +123,13 @@ python3 components/gantt/gantt.py serve
 
 打开 `http://127.0.0.1:8765/`。Agent 只在你显式调用 Skill 时，用本次打开并核对的会话证据同步工作区路径精确匹配的任务。手动修改的字段和项目 DDL 会保留。组件未安装时，Skill 跳过同步。详细规则见[甘特图同步说明](references/gantt-sync.md)。
 
-页面右上角可在**日间纸白（深红点缀）**与**夜间绿黑**两套配色之间切换，选择保存在当前浏览器本地；首次打开沿用夜间版。布局、任务数据与同步规则不随配色改变。
+页面右上角可在**日间纯白（深红点缀）**与**夜间绿黑**两套配色之间切换，选择保存在当前浏览器本地；首次打开沿用夜间版。布局、任务数据与同步规则不随配色改变。
 
 以下两张截图只展示仓库附带的虚构示例，没有作者的真实项目或工作区：
 
-**日间版 · 纸白与深红点缀**
+**日间版 · 纯白底色与少量深红标记**
 
-![虚构示例计划板的日间纸白配色截图](assets/screenshots/gantt-day.png)
+![虚构示例计划板的日间纯白配色截图](assets/screenshots/gantt-day.png)
 
 **夜间版 · 绿黑配色**
 
@@ -144,6 +144,12 @@ python3 components/gantt/gantt.py seed --input components/gantt/example.json
 [示例数据](components/gantt/example.json)只有虚构项目、演示路径和日期，自动同步默认关闭；不含作者的真实项目、工作区或会话。种子命令不会覆盖已有图表。实际数据保存在本机 `~/.explain-everything-to-me/gantt/data.json`，不进入仓库；多个宿主安装副本共用这份数据。服务只监听 `127.0.0.1`，依赖 Python 标准库。
 
 仓库把功能分成核心 Skill（`SKILL.md`、`scripts/`、`references/`、`templates/`）和 `components/<组件 ID>/`。每个可选组件有自己的 `component.json`，安装器会发现并列出它们。以后新增组件无需改动核心安装布局。
+
+## 设计预览：日拱一卒每日日志
+
+正在设计的 [每日日志 dashboard](https://github.com/JamieJustTang/explain-everything-to-me/blob/main/components/daily-journal/DESIGN.md) 把一天的工作记录整理为「推进、留下、发现、可交流」。页面可按日期回看、手动编辑，也提供带 WorkRef 的 Agent 导入接口。当前是**本地原型**：尚未接入 Skill 的自动调用，也没有每日定时扫描；安装器不会将它列为可选组件。
+
+![使用虚构数据的每日日志原型](assets/screenshots/journal-prototype.png)
 
 ## 安装
 
