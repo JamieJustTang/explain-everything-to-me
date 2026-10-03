@@ -69,15 +69,19 @@ class JournalTest(unittest.TestCase):
         self.assertEqual(item['updated_at'], initial_version)
         digest = {'date': '2026-10-03', 'title': 'A day with a visible result',
                   'lead': 'The diagram made the question discussable.',
-                  'sections': [{'heading': 'A first structure', 'body': 'The diagram connects the main ideas.',
+                  'sections': [{'heading': 'A first structure', 'body': f'The diagram [[artifact:{item["id"]}]] connects the main ideas.',
                                 'entry_ids': [item['id']]}],
                   'closing': 'Check one boundary next.',
-                  'letter': {'salutation': 'Dear researcher', 'body': 'Show the diagram to a colleague.',
+                  'letter': {'salutation': 'Dear researcher', 'body': f'Show [[artifact:{item["id"]}]] to a colleague.',
                              'recipient': 'A colleague', 'suggested_ask': 'What is missing?',
                              'entry_ids': [item['id']]}}
         result = journal.compose(data, digest)
         self.assertEqual(result['entry_versions'][item['id']], item['updated_at'])
         self.assertEqual(data['digests']['2026-10-03']['letter']['entry_ids'], [item['id']])
+        digest['sections'][0]['body'] = 'The diagram connects the main ideas.'
+        with self.assertRaisesRegex(ValueError, 'inside the prose'):
+            journal.compose(data, digest)
+        digest['sections'][0]['body'] = f'The diagram [[artifact:{item["id"]}]] connects the main ideas.'
         digest['sections'][0]['entry_ids'] = ['not-an-entry']
         with self.assertRaisesRegex(ValueError, 'same|date'):
             journal.compose(data, digest)

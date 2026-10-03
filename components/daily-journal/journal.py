@@ -8,6 +8,7 @@ import fcntl
 import json
 import mimetypes
 import os
+import re
 import tempfile
 import uuid
 from datetime import date, datetime, timezone
@@ -184,6 +185,11 @@ def compose(data, payload):
             raise ValueError("Digest references must point to entries from this date")
         return list(dict.fromkeys(value))
 
+    def require_inline_artifacts(body, refs):
+        markers = set(re.findall(r"\[\[artifact:([\w-]+)\]\]", body))
+        if any(todays[ref].get("artifact") and ref not in markers for ref in refs):
+            raise ValueError("Artifact references must appear inside the prose")
+
     rendered = []
     referenced = set()
     for section in sections:
@@ -192,9 +198,11 @@ def compose(data, payload):
         refs = entry_ids(section.get("entry_ids", []))
         if not refs:
             raise ValueError("Each section needs at least one journal entry")
+        body = clean(section.get("body", ""), 4000)
+        require_inline_artifacts(body, refs)
         referenced.update(refs)
         rendered.append({"heading": clean(section.get("heading", ""), 140),
-                         "body": clean(section.get("body", ""), 4000), "entry_ids": refs})
+                         "body": body, "entry_ids": refs})
         if not rendered[-1]["heading"] or not rendered[-1]["body"]:
             raise ValueError("Digest heading and body are required")
     letter = payload.get("letter")
@@ -203,12 +211,14 @@ def compose(data, payload):
     letter_refs = entry_ids(letter.get("entry_ids", []))
     if not any(todays[ref].get("artifact") for ref in letter_refs):
         raise ValueError("Ready to Share must cite at least one artifact")
+    letter_body = clean(letter.get("body", ""), 3000)
+    require_inline_artifacts(letter_body, letter_refs)
     referenced.update(letter_refs)
     result = {"date": report_date, "title": clean(payload.get("title", ""), 180),
               "lead": clean(payload.get("lead", ""), 1500), "sections": rendered,
               "closing": clean(payload.get("closing", ""), 1500),
               "letter": {"salutation": clean(letter.get("salutation", ""), 120),
-                         "body": clean(letter.get("body", ""), 3000),
+                         "body": letter_body,
                          "recipient": clean(letter.get("recipient", ""), 240),
                          "suggested_ask": clean(letter.get("suggested_ask", ""), 700),
                          "entry_ids": letter_refs},

@@ -1,7 +1,7 @@
 const $ = (selector) => document.querySelector(selector);
 const esc = (value) => String(value ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const localDay = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
-const state = {data:null, date:localDay(), editing:null};
+const state = {data:null, date:localDay(), month:localDay().slice(0,7), editing:null};
 const labels = {progress:'推进',artifact:'留下',insight:'发现',share:'交流'};
 const readiness = {private:'还在加工',discussable:'可找人讨论',shared:'已经交流'};
 function toast(message){const node=$('#toast');node.textContent=message;node.style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>node.style.display='none',3800);}
@@ -15,8 +15,38 @@ function artifactLink(entry, className='artifact-link') {
   const href=external?target:`/api/artifact/${encodeURIComponent(entry.id)}`;
   return `<a class="${className}" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${label}<span aria-hidden="true"> ↗</span></a>`;
 }
-function paragraphs(value){return String(value||'').split(/\n\s*\n/).filter(Boolean).map(part=>`<p>${esc(part).replace(/\n/g,'<br>')}</p>`).join('');}
-function linkedEntries(ids, byId){return (ids||[]).map(id=>byId.get(id)).filter(Boolean).filter(entry=>entry.artifact).map(entry=>artifactLink(entry)).join('');}
+function inlineArtifact(entry){return artifactLink(entry,'inline-citation');}
+function paragraphs(value, byId, ids=[]){
+  const allowed=new Set(ids);
+  const cited=new Set([...String(value||'').matchAll(/\[\[artifact:([\w-]+)\]\]/g)].map(match=>match[1]));
+  const missing=ids.map(id=>byId?.get(id)).filter(entry=>entry?.artifact&&!cited.has(entry.id));
+  const parts=String(value||'').split(/\n\s*\n/).filter(Boolean);
+  return parts.map((part,index)=>{
+    let at=0, result='';
+    for(const match of part.matchAll(/\[\[artifact:([\w-]+)\]\]/g)){
+      result+=esc(part.slice(at,match.index)).replace(/\n/g,'<br>');
+      const entry=allowed.has(match[1])?byId?.get(match[1]):null;
+      result+=entry?.artifact?inlineArtifact(entry):esc(match[0]);
+      at=match.index+match[0].length;
+    }
+    result+=esc(part.slice(at)).replace(/\n/g,'<br>');
+    if(index===parts.length-1&&missing.length) result+=` <span class="legacy-citations">（参见 ${missing.map(inlineArtifact).join('、')}）</span>`;
+    return `<p>${result}</p>`;
+  }).join('');
+}
+const EMOJI=['🌱','🌿','🌻','🍀','🌸','🍎','🍋','🍓','🪻','🌼','🦋','🐝','⭐','✨','🪴','🍄','🌙','☀️','🪺','🎈','🧩','📚','✏️','🪁'];
+function dayEmoji(date){let hash=2166136261;for(const char of date){hash^=char.charCodeAt(0);hash=Math.imul(hash,16777619);}return EMOJI[(hash>>>0)%EMOJI.length];}
+function calendar(){
+  const [year,month]=state.month.split('-').map(Number), first=new Date(year,month-1,1), count=new Date(year,month,0).getDate();
+  const dates=new Set((state.data?.entries||[]).map(item=>item.date));
+  $('#calendar-month').textContent=first.toLocaleDateString('zh-CN',{year:'numeric',month:'long'});
+  const leading=(first.getDay()+6)%7;
+  $('#calendar-days').innerHTML=Array.from({length:leading},()=>'<span class="calendar-gap"></span>').join('')+Array.from({length:count},(_,index)=>{
+    const n=index+1, date=`${year}-${String(month).padStart(2,'0')}-${String(n).padStart(2,'0')}`, active=dates.has(date);
+    const classes=['calendar-day',active?'recorded':'empty-day',date===state.date?'selected':'',date===localDay()?'today':''].filter(Boolean).join(' ');
+    return `<button class="${classes}" data-date="${date}" aria-label="${date}${active?'，有记录':'，无记录'}" aria-pressed="${date===state.date}"><span class="day-icon" aria-hidden="true">${active?dayEmoji(date):''}</span><span class="day-num">${n}</span></button>`;
+  }).join('');
+}
 function render(){
   const d=new Date(`${state.date}T12:00:00`), items=entries(), byId=new Map(items.map(item=>[item.id,item]));
   const digest=state.data?.digests?.[state.date];
@@ -28,24 +58,24 @@ function render(){
   $('#coverage-text').textContent=digest?.lead||(items.length?'已有条目，但还没有经过原文核对的叙事摘要。':'写下一件小事，轨迹就从这里开始。');
   const stale=digest&&Object.entries(digest.entry_versions||{}).some(([id,version])=>byId.get(id)?.updated_at!==version);
   $('#digest-status').textContent=digest?(stale?'素材有变化 · 建议重写':'已整理成文'):'待撰写';
-  $('#digest-body').innerHTML=digest?`${(digest.sections||[]).map((section,index)=>`<section class="essay-section"><span class="section-number">${String(index+1).padStart(2,'0')}</span><h2>${esc(section.heading)}</h2>${paragraphs(section.body)}<div class="essay-links">${linkedEntries(section.entry_ids,byId)}</div></section>`).join('')}<div class="essay-closing"><span class="small-cap">KEEP THIS</span>${paragraphs(digest.closing)}</div>`:'<div class="empty-essay"><h2>这一天，还没有写成文章。</h2><p>条目只是材料。让 Agent 阅读当天会话、核对产物，再写出起因、转折、留下了什么和下一步。</p></div>';
+  $('#digest-body').innerHTML=digest?`${(digest.sections||[]).map((section,index)=>`<section class="essay-section"><span class="section-number">${String(index+1).padStart(2,'0')}</span><h2>${esc(section.heading)}</h2>${paragraphs(section.body,byId,section.entry_ids)}</section>`).join('')}<div class="essay-closing"><span class="small-cap">KEEP THIS</span>${paragraphs(digest.closing,byId)}</div>`:'<div class="empty-essay"><h2>这一天，还没有写成文章。</h2><p>条目只是材料。让 Agent 阅读当天会话、核对产物，再写出起因、转折、留下了什么和下一步。</p></div>';
   const letter=digest?.letter;
-  $('#letter-body').innerHTML=letter?`<h2>${esc(letter.salutation||'写给你的交流建议')}</h2><div class="letter-prose">${paragraphs(letter.body)}</div>${letter.recipient?`<div class="letter-detail"><span>适合找谁</span><strong>${esc(letter.recipient)}</strong></div>`:''}${letter.suggested_ask?`<div class="letter-detail"><span>可以问什么</span><strong>${esc(letter.suggested_ask)}</strong></div>`:''}<div class="letter-links">${linkedEntries(letter.entry_ids,byId)}</div><p class="letter-note">这里只给建议；不会自动发布或联系他人。</p>`:'<h2>先看清手里的东西</h2><p>当今日日志写好后，这里会给你一封具体的建议信：哪些成果值得展示，适合找谁，以及最好问什么。不会自动发送。</p>';
+  $('#letter-body').innerHTML=letter?`<h2>${esc(letter.salutation||'写给你的交流建议')}</h2><div class="letter-prose">${paragraphs(letter.body,byId,letter.entry_ids)}</div>${letter.recipient?`<div class="letter-detail"><span>适合找谁</span><strong>${esc(letter.recipient)}</strong></div>`:''}${letter.suggested_ask?`<div class="letter-detail"><span>可以问什么</span><strong>${esc(letter.suggested_ask)}</strong></div>`:''}<p class="letter-note">这里只给建议；不会自动发布或联系他人。</p>`:'<h2>先看清手里的东西</h2><p>当今日日志写好后，这里会给你一封具体的建议信：哪些成果值得展示，适合找谁，以及最好问什么。不会自动发送。</p>';
   $('#entry-list').innerHTML=items.length?items.map(x=>`<article class="entry"><span class="entry-kind ${esc(x.kind)}">${labels[x.kind]||'记录'}</span><div><h3><button data-id="${esc(x.id)}">${esc(x.title)}</button></h3>${x.detail?`<p>${esc(x.detail)}</p>`:''}<div class="entry-meta"><span>${esc(x.project||'未归类')}</span><span>${esc(readiness[x.readiness]||'')}</span>${x.artifact?artifactLink(x):''}${x.workrefs?.length?`<span>证据：${x.workrefs.map(esc).join(' · ')}</span>`:''}</div></div></article>`).join(''):'<div class="empty">还没有这一天的记录。</div>';
-  const artifacts=items.filter(x=>x.artifact);
-  $('#artifact-list').innerHTML=artifacts.length?artifacts.map(x=>`<div class="mini"><strong>${esc(x.title)}</strong><div>${artifactLink(x)}</div><small>${esc(x.project||'未归类')}</small></div>`).join(''):'<div class="empty">这一天还没有关联产物。</div>';
-  const dates=[...new Set((state.data?.entries||[]).map(x=>x.date))].sort().reverse();
-  $('#archive-days').innerHTML=dates.length?dates.map(date=>{const daily=state.data.entries.filter(x=>x.date===date);return `<button data-date="${esc(date)}"><strong>${esc(date)}</strong><span>${daily.length} 条记录 · ${daily.filter(x=>x.kind==='artifact').length} 个成果 · ${daily.filter(x=>x.readiness==='discussable'||x.readiness==='shared').length} 个可交流</span></button>`}).join(''):'<div class="empty">还没有过往记录。</div>';
+  calendar();
 }
 async function load(){try{const r=await fetch('/api/data',{cache:'no-store'});if(!r.ok)throw Error('读取日志失败');state.data=await r.json();render();}catch(e){toast(e.message);}}
 function edit(entry=null){state.editing=entry;$('#dialog-title').textContent=entry?'编辑这一步':'记下一步';const form=$('#entry-form');for(const field of ['date','kind','title','detail','project','artifact','artifact_target','readiness']) form.elements[field].value=entry?.[field]??({date:state.date,kind:'progress',readiness:'private'}[field]||'');$('#delete-entry').hidden=!entry;$('#editor').showModal();}
-async function mutate(payload){const r=await fetch('/api/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const body=await r.json();if(!r.ok)throw Error(body.error||'保存失败');state.data=body;render();}
+async function mutate(payload){const r=await fetch('/api/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const body=await r.json();if(!r.ok)throw Error(body.error||'保存失败');state.data=body;if(payload.action!=='delete'&&payload.date){state.date=payload.date;state.month=payload.date.slice(0,7);}render();}
 $('#add-entry').addEventListener('click',()=>edit());
 $('#entry-list').addEventListener('click',event=>{const b=event.target.closest('[data-id]');if(b)edit(state.data.entries.find(x=>x.id===b.dataset.id));});
 $('#entry-form').addEventListener('submit',async event=>{event.preventDefault();const values=Object.fromEntries(new FormData(event.target).entries());values.workrefs=state.editing?.workrefs||[];try{await mutate({action:state.editing?'update':'create',id:state.editing?.id,...values});$('#editor').close();toast('这一步已保存到本机');}catch(e){toast(e.message);}});
 $('#delete-entry').addEventListener('click',async()=>{if(!state.editing||!confirm(`删除“${state.editing.title}”？`))return;try{await mutate({action:'delete',id:state.editing.id});$('#editor').close();toast('记录已删除');}catch(e){toast(e.message);}});
 for(const id of ['close-dialog','cancel-entry']) $(`#${id}`).addEventListener('click',()=>$('#editor').close());
-function shift(days){const d=new Date(`${state.date}T12:00:00`);d.setDate(d.getDate()+days);state.date=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;render();}
-$('#archive-days').addEventListener('click',event=>{const button=event.target.closest('[data-date]');if(button){state.date=button.dataset.date;$('#archive-panel').hidden=true;render();}});
-$('#prev-day').addEventListener('click',()=>shift(-1));$('#next-day').addEventListener('click',()=>shift(1));$('#back-today').addEventListener('click',()=>{state.date=localDay();render()});$('#today-nav').addEventListener('click',()=>{state.date=localDay();render()});$('#archive-nav').addEventListener('click',()=>{$('#archive-panel').hidden=!$('#archive-panel').hidden;$('#archive-panel').scrollIntoView({behavior:'smooth',block:'start'});});
+function selectDay(date){state.date=date;state.month=date.slice(0,7);render();}
+function shift(days){const d=new Date(`${state.date}T12:00:00`);d.setDate(d.getDate()+days);selectDay(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);}
+function shiftMonth(delta){const [year,month]=state.month.split('-').map(Number), next=new Date(year,month-1+delta,1);state.month=`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`;calendar();}
+$('#calendar-days').addEventListener('click',event=>{const button=event.target.closest('[data-date]');if(button)selectDay(button.dataset.date);});
+$('#calendar-prev').addEventListener('click',()=>shiftMonth(-1));$('#calendar-next').addEventListener('click',()=>shiftMonth(1));$('#calendar-today').addEventListener('click',()=>selectDay(localDay()));
+$('#prev-day').addEventListener('click',()=>shift(-1));$('#next-day').addEventListener('click',()=>shift(1));$('#back-today').addEventListener('click',()=>selectDay(localDay()));
 load();

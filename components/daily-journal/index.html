@@ -9,18 +9,17 @@
   <aside class="side">
     <div class="identity"><span class="mark">日</span><div><strong>日拱一卒</strong><small>EXPLAIN EVERYTHING TO ME</small></div></div>
     <div class="side-label">个人日志 / DAILY LOG</div>
-    <nav aria-label="日期"><button id="today-nav" class="nav active">今日记录 <span>↗</span></button><button id="archive-nav" class="nav">过往积累 <span>⌕</span></button></nav>
+    <section class="calendar" aria-label="日志日历"><div class="calendar-head"><button id="calendar-prev" aria-label="上个月">‹</button><strong id="calendar-month"></strong><button id="calendar-next" aria-label="下个月">›</button></div><div class="calendar-weekdays" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div><div id="calendar-days" class="calendar-days"></div><div class="calendar-foot"><span><i class="calendar-legend"></i>有记录的日子会长出表情</span><button id="calendar-today">今天</button></div></section>
     <div class="side-note"><span class="small-cap">LOG PRINCIPLE</span><p>每天留下一个可积累对象。<br>每周留下一个可展示对象。</p></div>
     <div class="side-bottom"><span class="status-dot"></span> 本机保存 · 由你决定何时展示</div>
   </aside>
   <main>
     <header class="top"><div><span class="eyebrow">A DAILY PRACTICE OF MAKING</span><h1>把今天，留下来。</h1><p>把会话里的推进变成能回看、能继续、能交流的作品轨迹。</p></div><div class="top-actions"><span class="privacy">◌ 私人空间</span><button id="add-entry" class="primary">＋ 记下一步</button></div></header>
-    <section id="archive-panel" class="archive-panel" hidden><div class="section-head"><div><span class="small-cap">THE LONG ARC</span><h2>过往积累</h2></div><span>点击日期，回看留下的对象</span></div><div id="archive-days"></div></section>
     <section class="datebar"><div><button id="prev-day" aria-label="前一天">←</button><div><span class="small-cap">THE DAY IN PROGRESS</span><h2 id="date-title"></h2></div><button id="next-day" aria-label="后一天">→</button></div><button id="back-today">回到今天</button></section>
     <section class="headline" aria-label="当日概况"><div><span class="small-cap">TODAY'S TRACE</span><strong id="headline-text">今天还没有记录。</strong><p id="coverage-text">写下一件小事，轨迹就从这里开始。</p></div><div class="day-count"><b id="count">0</b><span>个可积累对象</span></div></section>
     <section class="metrics"><article><span>推进</span><strong id="count-progress">0</strong><small>让工作往前一步</small></article><article><span>留下</span><strong id="count-artifact">0</strong><small>能继续加工的对象</small></article><article><span>发现</span><strong id="count-insight">0</strong><small>值得记住的判断</small></article><article class="accent"><span>可交流</span><strong id="count-discussable">0</strong><small>别人已能看懂核心</small></article></section>
     <div class="layout"><article class="feed journal-article"><div class="article-kicker"><span class="small-cap">DAILY JOURNAL / 日志正文</span><span id="digest-status"></span></div><div id="digest-body"></div></article>
-    <aside class="reflection"><section class="reflection-card letter-card"><span class="small-cap">READY TO SHARE · 给你的建议信</span><div id="letter-body"></div></section><section class="reflection-card quiet"><span class="small-cap">TODAY'S OUTPUTS</span><h2>把产物带走</h2><p>点击已关联的文件或链接，直接打开今天留下的东西。</p><div id="artifact-list"></div></section></aside></div>
+    <aside class="reflection"><section class="reflection-card letter-card"><span class="small-cap">READY TO SHARE · 给你的建议信</span><div id="letter-body"></div></section></aside></div>
     <details class="source-drawer"><summary>查看日志依据与原始条目 <span id="source-note">从会话证据与手写记录整理</span></summary><div id="entry-list"></div></details>
     <footer>今天没有记录，也可以如实留白。日记只保存在本机；Agent 写入必须附可核对的会话证据。</footer>
   </main>
