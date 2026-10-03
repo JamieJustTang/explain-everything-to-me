@@ -35,6 +35,7 @@ function paragraphs(value, byId, ids=[]){
   }).join('');
 }
 const EMOJI=['🌱','🌿','🌻','🍀','🌸','🍎','🍋','🍓','🪻','🌼','🦋','🐝','⭐','✨','🪴','🍄','🌙','☀️','🪺','🎈','🧩','📚','✏️','🪁'];
+const TYPE_LINE_SECONDS=.84;
 function dayEmoji(date){let hash=2166136261;for(const char of date){hash^=char.charCodeAt(0);hash=Math.imul(hash,16777619);}return EMOJI[(hash>>>0)%EMOJI.length];}
 function calendar(){
   const [year,month]=state.month.split('-').map(Number), first=new Date(year,month-1,1), count=new Date(year,month,0).getDate();
@@ -64,7 +65,7 @@ function addLines(timeline, element){
   gsap.set(element,{clipPath:mask(0,0)});
   for(let line=0;line<lines;line++){
     timeline.set(element,{clipPath:mask(line,0)});
-    timeline.to(element,{clipPath:mask(line,100),duration:.42,ease:'none'});
+    timeline.to(element,{clipPath:mask(line,100),duration:TYPE_LINE_SECONDS,ease:'none'});
   }
   timeline.set(element,{clearProps:'clipPath'});
 }
